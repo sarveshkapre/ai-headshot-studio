@@ -128,18 +128,21 @@
 
       <section class="panel panel--preview">
         <div class="card preview-card">
-          <div class="card__title">Preview</div>
+          <div class="card__title-row">
+            <div class="card__title">Preview</div>
+            <button id="toggleZoom" class="btn btn--ghost btn--small" type="button">Actual size</button>
+          </div>
           <div class="preview-grid">
             <div class="preview">
               <span>Original</span>
               <div id="originalMeta" class="preview__meta"></div>
-              <img id="originalPreview" alt="Original preview" />
+              <img id="originalPreview" class="preview__image" alt="Original preview" />
             </div>
             <div class="preview">
               <span>Processed</span>
               <div id="processedMeta" class="preview__meta"></div>
               <div class="preview__frame">
-                <img id="processedPreview" alt="Processed preview" />
+                <img id="processedPreview" class="preview__image" alt="Processed preview" />
                 <div id="loading" class="loading">Processing…</div>
               </div>
             </div>

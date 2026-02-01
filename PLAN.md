@@ -37,6 +37,7 @@ More: see `docs/PROJECT.md`.
 - Added output metadata (dimensions/format/time) so users can verify sizing before download.
 - Added client-side file validation (type/size) and a Cancel action for in-flight processing.
 - Added headroom control (top-bias) to fine-tune crop framing.
+- Added a preview zoom toggle (fit vs actual size) for closer inspection.
 
 ## Next to ship
 - Face-guided crop framing (lightweight detector).

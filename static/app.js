@@ -30,6 +30,7 @@ const elements = {
   styleGrid: document.getElementById("styleGrid"),
   originalMeta: document.getElementById("originalMeta"),
   processedMeta: document.getElementById("processedMeta"),
+  toggleZoom: document.getElementById("toggleZoom"),
   toast: document.getElementById("toast"),
   toastMessage: document.getElementById("toastMessage"),
   toastDismiss: document.getElementById("toastDismiss"),
@@ -65,6 +66,7 @@ function setStatusLoading(isLoading) {
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 const STORAGE_KEY = "ai-headshot-studio:settings:v1";
+const ZOOM_KEY = "ai-headshot-studio:preview-zoom:v1";
 
 function safeParseJSON(value) {
   try {
@@ -84,6 +86,31 @@ function readSettings() {
   } catch {
     return null;
   }
+}
+
+function readZoomMode() {
+  try {
+    const value = localStorage.getItem(ZOOM_KEY);
+    return value === "actual" ? "actual" : "fit";
+  } catch {
+    return "fit";
+  }
+}
+
+function writeZoomMode(mode) {
+  try {
+    localStorage.setItem(ZOOM_KEY, mode);
+  } catch {}
+}
+
+function setZoomMode(mode) {
+  const isActual = mode === "actual";
+  elements.toggleZoom.textContent = isActual ? "Fit to panel" : "Actual size";
+  elements.originalPreview.classList.toggle("preview__image--actual", isActual);
+  elements.processedPreview.classList.toggle("preview__image--actual", isActual);
+  const processedFrame = elements.processedPreview.closest(".preview__frame");
+  processedFrame?.classList.toggle("preview__frame--actual", isActual);
+  writeZoomMode(mode);
 }
 
 function writeSettings(settings) {
@@ -549,9 +576,14 @@ function bindEvents() {
     enforceCompatibleOptions();
     updateSliderValues();
     applyStyle("classic");
+    setZoomMode("fit");
     showToast("Studio reset.");
   });
   elements.toastDismiss.addEventListener("click", () => hideToast());
+  elements.toggleZoom.addEventListener("click", () => {
+    const current = readZoomMode();
+    setZoomMode(current === "fit" ? "actual" : "fit");
+  });
 
   document.addEventListener("keydown", (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
@@ -573,5 +605,6 @@ function bindEvents() {
 updateSliderValues();
 state.saved = readSettings();
 applySavedSettings();
+setZoomMode(readZoomMode());
 loadPresets();
 bindEvents();

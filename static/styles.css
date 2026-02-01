@@ -276,6 +276,18 @@ input[type="range"] {
   object-fit: contain;
 }
 
+.preview__image--actual {
+  width: auto;
+  max-width: none;
+  height: auto;
+  object-fit: unset;
+}
+
+.preview__frame--actual {
+  overflow: auto;
+  max-height: 420px;
+}
+
 .preview__frame {
   position: relative;
 }

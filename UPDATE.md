@@ -8,6 +8,7 @@
 - Added output metadata headers and surfaced output dimensions/time in the preview.
 - Added client-side file validation (type/size) and a Cancel button for in-flight processing.
 - Added headroom control (top-bias) to fine-tune crop framing.
+- Added a preview zoom toggle (fit vs actual size).
 
 ## Verification
 Commands run:
