@@ -39,6 +39,7 @@ docker run --rm -p 8000:8000 ai-headshot-studio
 - `color` (0.5–1.5)
 - `sharpness` (0.5–1.8)
 - `soften` (0–1)
+- `jpeg_quality` (60–100, default 92; applies to JPEG output only)
 - `format` (`png|jpeg`)
 
 ## Notes

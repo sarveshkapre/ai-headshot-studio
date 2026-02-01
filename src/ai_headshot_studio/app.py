@@ -81,6 +81,7 @@ async def process(
     color: float = Form(1.0),
     sharpness: float = Form(1.0),
     soften: float = Form(0.0),
+    jpeg_quality: int = Form(92),
     format: str = Form("png"),
 ) -> StreamingResponse:
     data = await read_upload_limited(image, MAX_UPLOAD_BYTES)
@@ -96,12 +97,13 @@ async def process(
         color=color,
         sharpness=sharpness,
         soften=soften,
+        jpeg_quality=jpeg_quality,
         output_format=output_format,
     )
     try:
         start = time.perf_counter()
         result = process_image(data, req)
-        payload = to_bytes(result, output_format)
+        payload = to_bytes(result, output_format, req.jpeg_quality)
     except ProcessingError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

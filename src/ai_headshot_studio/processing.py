@@ -29,6 +29,7 @@ class ProcessRequest:
     color: float
     sharpness: float
     soften: float
+    jpeg_quality: int
     output_format: str
 
 
@@ -150,6 +151,7 @@ def normalize_request(req: ProcessRequest) -> ProcessRequest:
             color=style.get("color", req.color),
             sharpness=style.get("sharpness", req.sharpness),
             soften=style.get("soften", req.soften),
+            jpeg_quality=req.jpeg_quality,
             output_format=output_format,
         )
     return ProcessRequest(
@@ -163,6 +165,7 @@ def normalize_request(req: ProcessRequest) -> ProcessRequest:
         color=req.color,
         sharpness=req.sharpness,
         soften=req.soften,
+        jpeg_quality=req.jpeg_quality,
         output_format=output_format,
     )
 
@@ -189,6 +192,7 @@ def clamp_request(req: ProcessRequest) -> ProcessRequest:
         color=clamp(ensure_finite(req.color, "color"), 0.5, 1.5),
         sharpness=clamp(ensure_finite(req.sharpness, "sharpness"), 0.5, 1.8),
         soften=clamp(ensure_finite(req.soften, "soften"), 0.0, 1.0),
+        jpeg_quality=int(clamp(float(req.jpeg_quality), 60, 100)),
         output_format=req.output_format,
     )
 
@@ -221,7 +225,7 @@ def process_image(data: bytes, req: ProcessRequest) -> Image.Image:
     return image
 
 
-def to_bytes(image: Image.Image, output_format: str) -> bytes:
+def to_bytes(image: Image.Image, output_format: str, jpeg_quality: int = 92) -> bytes:
     buffer = io.BytesIO()
     fmt = output_format.lower()
     if fmt not in {"png", "jpeg"}:
@@ -233,7 +237,7 @@ def to_bytes(image: Image.Image, output_format: str) -> bytes:
             image = background
         else:
             image = image.convert("RGB")
-        image.save(buffer, format="JPEG", quality=92, optimize=True)
+        image.save(buffer, format="JPEG", quality=jpeg_quality, optimize=True)
     else:
         image.save(buffer, format="PNG", optimize=True)
     return buffer.getvalue()

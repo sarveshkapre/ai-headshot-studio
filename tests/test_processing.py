@@ -52,6 +52,7 @@ def test_process_passport_size() -> None:
         color=1.0,
         sharpness=1.0,
         soften=0.0,
+        jpeg_quality=92,
         output_format="png",
     )
     result = process_image(data, req)
@@ -73,6 +74,7 @@ def test_process_is_case_insensitive_for_keys() -> None:
         color=1.0,
         sharpness=1.0,
         soften=0.0,
+        jpeg_quality=92,
         output_format="PNG",
     )
     result = process_image(data, req)
@@ -92,6 +94,7 @@ def test_process_rejects_nan_values() -> None:
         color=1.0,
         sharpness=1.0,
         soften=0.0,
+        jpeg_quality=92,
         output_format="png",
     )
     with pytest.raises(ProcessingError):

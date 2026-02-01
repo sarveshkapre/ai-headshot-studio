@@ -40,6 +40,7 @@ More: see `docs/PROJECT.md`.
 - Added a preview zoom toggle (fit vs actual size) for closer inspection.
 - Added a background color swatch preview next to the backdrop selector.
 - Added before/after comparison slider in the preview.
+- Added JPEG quality control for export sizing.
 
 ## Next to ship
 - Face-guided crop framing (lightweight detector).

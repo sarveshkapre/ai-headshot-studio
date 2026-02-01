@@ -48,6 +48,9 @@ const elements = {
   cropSliders: {
     topBias: document.getElementById("topBias"),
   },
+  exportSliders: {
+    jpegQuality: document.getElementById("jpegQuality"),
+  },
   sliderValues: {
     brightness: document.getElementById("brightnessValue"),
     contrast: document.getElementById("contrastValue"),
@@ -57,6 +60,9 @@ const elements = {
   },
   cropSliderValues: {
     topBias: document.getElementById("topBiasValue"),
+  },
+  exportSliderValues: {
+    jpegQuality: document.getElementById("jpegQualityValue"),
   },
 };
 
@@ -136,6 +142,7 @@ function scheduleSaveSettings() {
       preset: elements.preset.value,
       topBias: Number(elements.cropSliders.topBias.value),
       format: elements.format.value,
+      jpegQuality: Number(elements.exportSliders.jpegQuality.value),
       autoUpdate: elements.autoUpdate.checked,
       style: state.style,
       sliders: getCurrentSliderValues(),
@@ -171,6 +178,11 @@ function updateSliderValues() {
   });
   Object.keys(elements.cropSliders).forEach((key) => {
     elements.cropSliderValues[key].textContent = Number(elements.cropSliders[key].value).toFixed(2);
+  });
+  Object.keys(elements.exportSliders).forEach((key) => {
+    elements.exportSliderValues[key].textContent = String(
+      Math.round(Number(elements.exportSliders[key].value)),
+    );
   });
 }
 
@@ -210,6 +222,9 @@ function applySavedSettings() {
   }
   if (typeof state.saved.topBias === "number" && Number.isFinite(state.saved.topBias)) {
     elements.cropSliders.topBias.value = String(state.saved.topBias);
+  }
+  if (typeof state.saved.jpegQuality === "number" && Number.isFinite(state.saved.jpegQuality)) {
+    elements.exportSliders.jpegQuality.value = String(state.saved.jpegQuality);
   }
   if (typeof state.saved.format === "string") {
     elements.format.value = state.saved.format;
@@ -417,6 +432,7 @@ function formDataFromState() {
   data.append("background", elements.background.value);
   data.append("preset", elements.preset.value);
   data.append("top_bias", elements.cropSliders.topBias.value);
+  data.append("jpeg_quality", elements.exportSliders.jpegQuality.value);
   data.append("brightness", elements.sliders.brightness.value);
   data.append("contrast", elements.sliders.contrast.value);
   data.append("color", elements.sliders.color.value);
@@ -549,6 +565,16 @@ function bindEvents() {
     });
   });
 
+  Object.values(elements.exportSliders).forEach((slider) => {
+    slider.addEventListener("input", () => {
+      updateSliderValues();
+      if (elements.format.value === "jpeg") {
+        queueProcess();
+      }
+      scheduleSaveSettings();
+    });
+  });
+
   elements.removeBg.addEventListener("change", () => {
     enforceCompatibleOptions();
     updateBackgroundSwatch();
@@ -568,6 +594,7 @@ function bindEvents() {
   elements.format.addEventListener("change", () => {
     enforceCompatibleOptions();
     queueProcess();
+    elements.exportSliders.jpegQuality.disabled = elements.format.value !== "jpeg";
     scheduleSaveSettings();
   });
   elements.autoUpdate.addEventListener("change", () => {
@@ -599,6 +626,7 @@ function bindEvents() {
     elements.preset.value = "portrait-4x5";
     elements.cropSliders.topBias.value = "0.2";
     elements.format.value = "png";
+    elements.exportSliders.jpegQuality.value = "92";
     elements.autoUpdate.checked = true;
     enforceCompatibleOptions();
     updateSliderValues();
@@ -639,6 +667,7 @@ updateSliderValues();
 state.saved = readSettings();
 applySavedSettings();
 updateBackgroundSwatch();
+elements.exportSliders.jpegQuality.disabled = elements.format.value !== "jpeg";
 setZoomMode(readZoomMode());
 loadPresets();
 bindEvents();
