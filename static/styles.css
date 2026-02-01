@@ -97,6 +97,13 @@ body {
   margin: 0;
 }
 
+.button-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .card--drop {
   display: flex;
   align-items: center;

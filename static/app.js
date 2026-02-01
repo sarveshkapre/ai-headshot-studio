@@ -19,6 +19,7 @@ const elements = {
   resetBackground: document.getElementById("resetBackground"),
   preset: document.getElementById("preset"),
   format: document.getElementById("format"),
+  resetCropExport: document.getElementById("resetCropExport"),
   autoUpdate: document.getElementById("autoUpdate"),
   processBtn: document.getElementById("processBtn"),
   downloadBtn: document.getElementById("downloadBtn"),
@@ -654,6 +655,17 @@ function bindEvents() {
     updateBackgroundSwatch();
     setZoomMode("fit");
     showToast("Studio reset.");
+  });
+  elements.resetCropExport.addEventListener("click", () => {
+    elements.preset.value = "portrait-4x5";
+    elements.cropSliders.topBias.value = "0.2";
+    elements.format.value = "png";
+    elements.exportSliders.jpegQuality.value = "92";
+    elements.exportSliders.jpegQuality.disabled = true;
+    updateSliderValues();
+    queueProcess();
+    scheduleSaveSettings();
+    showToast("Crop/export reset.");
   });
   elements.resetBackground.addEventListener("click", () => {
     elements.removeBg.checked = false;

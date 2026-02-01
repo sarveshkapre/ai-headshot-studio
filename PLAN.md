@@ -44,6 +44,7 @@ More: see `docs/PROJECT.md`.
 - Added output size metadata in the preview (KB/MB).
 - Added clipboard paste upload for faster workflows.
 - Added a one-click background reset.
+- Added a quick reset for crop + export controls.
 
 ## Next to ship
 - Face-guided crop framing (lightweight detector).

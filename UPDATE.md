@@ -12,9 +12,10 @@
 - Added a background swatch preview for quick visual confirmation.
 - Added a before/after comparison slider for the processed preview.
 - Added JPEG quality control for smaller/larger exports.
-- Added output size metadata (KB/MB) to the preview.
-- Added clipboard paste upload for quick image input.
-- Added a one-click background reset.
+ - Added output size metadata (KB/MB) to the preview.
+ - Added clipboard paste upload for quick image input.
+ - Added a one-click background reset.
+- Added a quick reset for crop/export controls.
 
 ## Verification
 Commands run:
