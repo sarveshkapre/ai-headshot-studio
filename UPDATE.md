@@ -16,7 +16,8 @@
  - Added clipboard paste upload for quick image input.
  - Added a one-click background reset.
  - Added a quick reset for crop/export controls.
-- Added recent export history (last 3) with download shortcuts.
+ - Added recent export history (last 3) with download shortcuts.
+- Added a keyboard shortcuts help modal.
 
 ## Verification
 Commands run:

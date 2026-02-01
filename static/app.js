@@ -38,6 +38,9 @@ const elements = {
   compareSlider: document.getElementById("compareSlider"),
   compareLine: document.querySelector(".compare__line"),
   historyList: document.getElementById("historyList"),
+  shortcutsBtn: document.getElementById("shortcutsBtn"),
+  modalOverlay: document.getElementById("modalOverlay"),
+  closeModal: document.getElementById("closeModal"),
   toast: document.getElementById("toast"),
   toastMessage: document.getElementById("toastMessage"),
   toastDismiss: document.getElementById("toastDismiss"),
@@ -758,6 +761,17 @@ function bindEvents() {
     const current = readZoomMode();
     setZoomMode(current === "fit" ? "actual" : "fit");
   });
+  elements.shortcutsBtn.addEventListener("click", () => {
+    elements.modalOverlay.hidden = false;
+  });
+  elements.closeModal.addEventListener("click", () => {
+    elements.modalOverlay.hidden = true;
+  });
+  elements.modalOverlay.addEventListener("click", (event) => {
+    if (event.target === elements.modalOverlay) {
+      elements.modalOverlay.hidden = true;
+    }
+  });
   elements.compareSlider.addEventListener("input", () => {
     const value = Number(elements.compareSlider.value);
     elements.compareOriginal.style.clipPath = `inset(0 ${100 - value}% 0 0)`;
@@ -776,6 +790,7 @@ function bindEvents() {
         showToast("Canceled.");
       } else {
         hideToast();
+        elements.modalOverlay.hidden = true;
       }
     }
   });

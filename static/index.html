@@ -198,7 +198,23 @@
 
     <footer class="footer">
       <span>Local-first. No uploads. Works offline after setup.</span>
+      <button id="shortcutsBtn" class="btn btn--ghost btn--small" type="button">Shortcuts</button>
     </footer>
+
+    <div id="modalOverlay" class="modal-overlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle">
+        <div class="card__title-row">
+          <div id="shortcutsTitle" class="card__title">Keyboard shortcuts</div>
+          <button id="closeModal" class="btn btn--ghost btn--small" type="button">Close</button>
+        </div>
+        <ul class="modal-list">
+          <li><strong>Ctrl/⌘ + Enter</strong> — Process image</li>
+          <li><strong>Esc</strong> — Cancel processing / close dialogs</li>
+          <li><strong>Paste</strong> — Paste an image from clipboard</li>
+          <li><strong>Drag & drop</strong> — Drop a photo to upload</li>
+        </ul>
+      </div>
+    </div>
 
     <script src="/static/app.js"></script>
   </body>
