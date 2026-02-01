@@ -8,6 +8,7 @@ from PIL import Image
 from ai_headshot_studio.processing import (
     ProcessingError,
     ProcessRequest,
+    available_styles,
     crop_to_aspect,
     load_image,
     process_image,
@@ -97,3 +98,10 @@ def test_load_image_applies_exif_orientation() -> None:
     data = make_jpeg_with_orientation(400, 200, orientation=6)
     image = load_image(data)
     assert image.size == (200, 400)
+
+
+def test_available_styles_include_parameters() -> None:
+    styles = {style["key"]: style for style in available_styles()}
+    classic = styles["classic"]
+    for key in ["brightness", "contrast", "color", "sharpness", "soften"]:
+        assert key in classic

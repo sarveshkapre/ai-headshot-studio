@@ -30,6 +30,8 @@ More: see `docs/PROJECT.md`.
 - Added in-app, dismissible error messaging (no blocking `alert()`).
 - Improved keyboard accessibility for upload and processing shortcuts (Ctrl/⌘+Enter).
 - Applied EXIF orientation on load so crops/previews match how photos were taken.
+- Style presets now apply to sliders (and slider tweaks automatically switch to Manual).
+- Added a one-click slider reset to neutral values.
 
 ## Next to ship
 - Face-guided crop framing (lightweight detector).

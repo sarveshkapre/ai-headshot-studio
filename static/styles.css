@@ -85,6 +85,18 @@ body {
   margin-bottom: 12px;
 }
 
+.card__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.card__title-row .card__title {
+  margin: 0;
+}
+
 .card--drop {
   display: flex;
   align-items: center;
@@ -212,6 +224,13 @@ input[type="range"] {
   background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
+}
+
+.btn--small {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
 }
 
 .btn:disabled {

@@ -3,6 +3,7 @@
 ## Summary
 - Shipped offline-first UI polish (removed Google Fonts), better error UX, and improved keyboard accessibility.
 - Made image processing more robust (EXIF auto-orientation, tighter request normalization, and upload size-limited reads).
+- Improved style preset UX: presets now populate sliders, edits switch to Manual, and sliders have a one-click reset.
 
 ## Verification
 Commands run:
@@ -10,4 +11,4 @@ Commands run:
 - `make build`
 
 ## PR
-- Opened: https://github.com/sarveshkapre/ai-headshot-studio/pull/1
+- No PR (worked directly on `main`).

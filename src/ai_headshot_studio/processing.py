@@ -248,5 +248,5 @@ def available_presets() -> list[dict[str, str | float | int | None]]:
     ]
 
 
-def available_styles() -> list[dict[str, str]]:
-    return [{"key": key, "name": key.replace("-", " ").title()} for key in STYLES]
+def available_styles() -> list[dict[str, str | float]]:
+    return [{"key": key, "name": key.replace("-", " ").title(), **STYLES[key]} for key in STYLES]
