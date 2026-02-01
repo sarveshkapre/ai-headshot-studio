@@ -33,12 +33,15 @@ def parse_bool(value: str | None, default: bool = False) -> bool:
     return value.lower() in {"1", "true", "yes", "on"}
 
 
-def build_output_headers(image: Image.Image, output_format: str, elapsed_ms: int) -> dict[str, str]:
+def build_output_headers(
+    image: Image.Image, output_format: str, elapsed_ms: int, payload_bytes: int
+) -> dict[str, str]:
     return {
         "X-Output-Width": str(image.width),
         "X-Output-Height": str(image.height),
         "X-Output-Format": output_format,
         "X-Processing-Ms": str(max(0, elapsed_ms)),
+        "X-Output-Bytes": str(max(0, payload_bytes)),
     }
 
 
@@ -112,5 +115,5 @@ async def process(
     return StreamingResponse(
         iter([payload]),
         media_type=media_type,
-        headers=build_output_headers(result, output_format, elapsed_ms),
+        headers=build_output_headers(result, output_format, elapsed_ms, len(payload)),
     )

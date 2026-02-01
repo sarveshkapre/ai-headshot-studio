@@ -41,6 +41,7 @@ More: see `docs/PROJECT.md`.
 - Added a background color swatch preview next to the backdrop selector.
 - Added before/after comparison slider in the preview.
 - Added JPEG quality control for export sizing.
+- Added output size metadata in the preview (KB/MB).
 
 ## Next to ship
 - Face-guided crop framing (lightweight detector).

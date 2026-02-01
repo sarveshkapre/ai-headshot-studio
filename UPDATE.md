@@ -12,6 +12,7 @@
 - Added a background swatch preview for quick visual confirmation.
 - Added a before/after comparison slider for the processed preview.
 - Added JPEG quality control for smaller/larger exports.
+- Added output size metadata (KB/MB) to the preview.
 
 ## Verification
 Commands run:

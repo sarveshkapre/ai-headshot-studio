@@ -368,6 +368,11 @@ function setFile(file) {
   hideToast();
   elements.processedMeta.textContent = "";
   if (state.processedUrl) {
+    elements.compareSlider.value = "50";
+    elements.compareLine.style.left = "50%";
+    elements.compareOriginal.style.clipPath = "inset(0 50% 0 0)";
+  }
+  if (state.processedUrl) {
     URL.revokeObjectURL(state.processedUrl);
     state.processedUrl = null;
   }
@@ -475,10 +480,24 @@ async function processImage() {
     const height = response.headers.get("x-output-height");
     const fmt = response.headers.get("x-output-format");
     const ms = response.headers.get("x-processing-ms");
+    const bytes = response.headers.get("x-output-bytes");
     if (width && height) {
       const suffix = [];
       if (fmt) suffix.push(fmt.toUpperCase());
       if (ms) suffix.push(`${ms}ms`);
+      if (bytes) {
+        const size = Number(bytes);
+        if (Number.isFinite(size)) {
+          const units = ["B", "KB", "MB"];
+          let value = size;
+          let idx = 0;
+          while (value >= 1024 && idx < units.length - 1) {
+            value /= 1024;
+            idx += 1;
+          }
+          suffix.push(`${value.toFixed(value < 10 ? 1 : 0)}${units[idx]}`);
+        }
+      }
       elements.processedMeta.textContent =
         `${width}×${height}` + (suffix.length ? ` · ${suffix.join(" · ")}` : "");
     } else {
