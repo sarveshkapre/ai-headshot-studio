@@ -680,6 +680,26 @@ function bindEvents() {
       }
     }
   });
+
+  document.addEventListener("paste", (event) => {
+    const target = event.target;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+      return;
+    }
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type && item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          setFile(file);
+          showToast("Image pasted.");
+          event.preventDefault();
+          break;
+        }
+      }
+    }
+  });
 }
 
 updateSliderValues();

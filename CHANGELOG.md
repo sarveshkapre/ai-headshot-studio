@@ -15,6 +15,7 @@
 - Before/after comparison slider in the processed preview.
 - JPEG quality control for exports.
 - Output size metadata (bytes) in preview.
+- Clipboard paste upload support.
 
 ### Changed
 - Images are auto-oriented using EXIF metadata so previews/crops match how the photo was taken.

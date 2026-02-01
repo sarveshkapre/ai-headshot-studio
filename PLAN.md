@@ -42,6 +42,7 @@ More: see `docs/PROJECT.md`.
 - Added before/after comparison slider in the preview.
 - Added JPEG quality control for export sizing.
 - Added output size metadata in the preview (KB/MB).
+- Added clipboard paste upload for faster workflows.
 
 ## Next to ship
 - Face-guided crop framing (lightweight detector).
