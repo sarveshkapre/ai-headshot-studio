@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-headshot-studio"
+version = "0.1.0"
+description = "Local-first headshot enhancer: background removal, lighting, retouch, crop presets."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Sarvesh Kapre" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "pillow>=10.3",
+  "python-multipart>=0.0.9",
+  "rembg>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "mypy>=1.9",
+  "pytest>=8.1",
+  "ruff>=0.4",
+  "types-Pillow>=10.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_headshot_studio"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+warn_return_any = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = "-q"

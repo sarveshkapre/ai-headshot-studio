@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Headshot Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="backdrop"></div>
+    <header class="hero">
+      <div class="hero__label">Local-first studio</div>
+      <h1>AI Headshot Studio</h1>
+      <p>Background removal, lighting polish, and crop presets in one focused workspace.</p>
+    </header>
+
+    <main class="studio">
+      <section class="panel panel--controls">
+        <div class="card card--drop" id="dropzone">
+          <input id="fileInput" type="file" accept="image/*" />
+          <div class="drop__text">
+            <span>Drop a photo</span>
+            <small>or click to upload (max 12MB)</small>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__title">Style presets</div>
+          <div class="style-grid" id="styleGrid"></div>
+        </div>
+
+        <div class="card">
+          <div class="card__title">Background</div>
+          <div class="toggle-row">
+            <label class="switch">
+              <input id="removeBg" type="checkbox" />
+              <span class="slider"></span>
+            </label>
+            <div>
+              <div class="toggle-label">Remove background</div>
+              <small>Runs locally with rembg</small>
+            </div>
+          </div>
+          <div class="select-row">
+            <label for="background">Backdrop</label>
+            <select id="background">
+              <option value="white">Clean white</option>
+              <option value="light">Soft light</option>
+              <option value="blue">Studio blue</option>
+              <option value="gray">Neutral gray</option>
+              <option value="transparent">Transparent</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__title">Lighting + retouch</div>
+          <div class="slider-row">
+            <label for="brightness">Brightness <span id="brightnessValue">1.00</span></label>
+            <input id="brightness" type="range" min="0.5" max="1.5" step="0.01" value="1" />
+          </div>
+          <div class="slider-row">
+            <label for="contrast">Contrast <span id="contrastValue">1.00</span></label>
+            <input id="contrast" type="range" min="0.5" max="1.5" step="0.01" value="1" />
+          </div>
+          <div class="slider-row">
+            <label for="color">Color <span id="colorValue">1.00</span></label>
+            <input id="color" type="range" min="0.5" max="1.5" step="0.01" value="1" />
+          </div>
+          <div class="slider-row">
+            <label for="sharpness">Sharpness <span id="sharpnessValue">1.00</span></label>
+            <input id="sharpness" type="range" min="0.5" max="1.8" step="0.01" value="1" />
+          </div>
+          <div class="slider-row">
+            <label for="soften">Soften <span id="softenValue">0.00</span></label>
+            <input id="soften" type="range" min="0" max="1" step="0.01" value="0" />
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__title">Crop + export</div>
+          <div class="select-row">
+            <label for="preset">Crop preset</label>
+            <select id="preset"></select>
+          </div>
+          <div class="select-row">
+            <label for="format">Format</label>
+            <select id="format">
+              <option value="png">PNG</option>
+              <option value="jpeg">JPEG</option>
+            </select>
+          </div>
+          <div class="toggle-row">
+            <label class="switch">
+              <input id="autoUpdate" type="checkbox" checked />
+              <span class="slider"></span>
+            </label>
+            <div>
+              <div class="toggle-label">Auto update</div>
+              <small>Apply changes as you tweak</small>
+            </div>
+          </div>
+          <div class="action-row">
+            <button id="processBtn" class="btn">Process</button>
+            <button id="downloadBtn" class="btn btn--ghost" disabled>Download</button>
+          </div>
+          <small class="hint">Shortcut: Ctrl + Enter to process</small>
+        </div>
+      </section>
+
+      <section class="panel panel--preview">
+        <div class="card preview-card">
+          <div class="card__title">Preview</div>
+          <div class="preview-grid">
+            <div class="preview">
+              <span>Original</span>
+              <img id="originalPreview" alt="Original preview" />
+            </div>
+            <div class="preview">
+              <span>Processed</span>
+              <div class="preview__frame">
+                <img id="processedPreview" alt="Processed preview" />
+                <div id="loading" class="loading">Processing…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card tips">
+          <div class="card__title">Studio tips</div>
+          <ul>
+            <li>Use a high-res source photo with even lighting.</li>
+            <li>Keep the face centered; presets bias toward headroom.</li>
+            <li>Transparent output works best with PNG.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Local-first. No uploads. Works offline after setup.</span>
+    </footer>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
