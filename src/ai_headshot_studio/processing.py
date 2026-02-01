@@ -23,6 +23,7 @@ class ProcessRequest:
     background: str
     preset: str
     style: str | None
+    top_bias: float
     brightness: float
     contrast: float
     color: float
@@ -143,6 +144,7 @@ def normalize_request(req: ProcessRequest) -> ProcessRequest:
             background=background,
             preset=preset,
             style=style_key,
+            top_bias=req.top_bias,
             brightness=style.get("brightness", req.brightness),
             contrast=style.get("contrast", req.contrast),
             color=style.get("color", req.color),
@@ -155,6 +157,7 @@ def normalize_request(req: ProcessRequest) -> ProcessRequest:
         background=background,
         preset=preset,
         style=None,
+        top_bias=req.top_bias,
         brightness=req.brightness,
         contrast=req.contrast,
         color=req.color,
@@ -180,6 +183,7 @@ def clamp_request(req: ProcessRequest) -> ProcessRequest:
         background=req.background,
         preset=req.preset,
         style=req.style,
+        top_bias=clamp(ensure_finite(req.top_bias, "top_bias"), 0.0, 1.0),
         brightness=clamp(ensure_finite(req.brightness, "brightness"), 0.5, 1.5),
         contrast=clamp(ensure_finite(req.contrast, "contrast"), 0.5, 1.5),
         color=clamp(ensure_finite(req.color, "color"), 0.5, 1.5),
@@ -212,7 +216,7 @@ def process_image(data: bytes, req: ProcessRequest) -> Image.Image:
     image = apply_adjustments(image, req)
 
     ratio, width, height = ensure_preset(req.preset)
-    image = crop_to_aspect(image, ratio=ratio)
+    image = crop_to_aspect(image, ratio=ratio, top_bias=req.top_bias)
     image = resize_if_needed(image, width=width, height=height)
     return image
 

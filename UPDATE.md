@@ -7,6 +7,7 @@
 - Persisted studio settings locally (saved to `localStorage`) and added a “Reset studio” button.
 - Added output metadata headers and surfaced output dimensions/time in the preview.
 - Added client-side file validation (type/size) and a Cancel button for in-flight processing.
+- Added headroom control (top-bias) to fine-tune crop framing.
 
 ## Verification
 Commands run:

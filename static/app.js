@@ -40,12 +40,18 @@ const elements = {
     sharpness: document.getElementById("sharpness"),
     soften: document.getElementById("soften"),
   },
+  cropSliders: {
+    topBias: document.getElementById("topBias"),
+  },
   sliderValues: {
     brightness: document.getElementById("brightnessValue"),
     contrast: document.getElementById("contrastValue"),
     color: document.getElementById("colorValue"),
     sharpness: document.getElementById("sharpnessValue"),
     soften: document.getElementById("softenValue"),
+  },
+  cropSliderValues: {
+    topBias: document.getElementById("topBiasValue"),
   },
 };
 
@@ -96,6 +102,7 @@ function scheduleSaveSettings() {
       removeBg: elements.removeBg.checked,
       background: elements.background.value,
       preset: elements.preset.value,
+      topBias: Number(elements.cropSliders.topBias.value),
       format: elements.format.value,
       autoUpdate: elements.autoUpdate.checked,
       style: state.style,
@@ -129,6 +136,9 @@ function hideToast() {
 function updateSliderValues() {
   Object.keys(elements.sliders).forEach((key) => {
     elements.sliderValues[key].textContent = Number(elements.sliders[key].value).toFixed(2);
+  });
+  Object.keys(elements.cropSliders).forEach((key) => {
+    elements.cropSliderValues[key].textContent = Number(elements.cropSliders[key].value).toFixed(2);
   });
 }
 
@@ -165,6 +175,9 @@ function applySavedSettings() {
   }
   if (typeof state.saved.background === "string") {
     elements.background.value = state.saved.background;
+  }
+  if (typeof state.saved.topBias === "number" && Number.isFinite(state.saved.topBias)) {
+    elements.cropSliders.topBias.value = String(state.saved.topBias);
   }
   if (typeof state.saved.format === "string") {
     elements.format.value = state.saved.format;
@@ -353,6 +366,7 @@ function formDataFromState() {
   data.append("remove_bg", elements.removeBg.checked ? "true" : "false");
   data.append("background", elements.background.value);
   data.append("preset", elements.preset.value);
+  data.append("top_bias", elements.cropSliders.topBias.value);
   data.append("brightness", elements.sliders.brightness.value);
   data.append("contrast", elements.sliders.contrast.value);
   data.append("color", elements.sliders.color.value);
@@ -475,6 +489,14 @@ function bindEvents() {
     });
   });
 
+  Object.values(elements.cropSliders).forEach((slider) => {
+    slider.addEventListener("input", () => {
+      updateSliderValues();
+      queueProcess();
+      scheduleSaveSettings();
+    });
+  });
+
   elements.removeBg.addEventListener("change", () => {
     enforceCompatibleOptions();
     queueProcess();
@@ -521,9 +543,11 @@ function bindEvents() {
     elements.removeBg.checked = false;
     elements.background.value = "white";
     elements.preset.value = "portrait-4x5";
+    elements.cropSliders.topBias.value = "0.2";
     elements.format.value = "png";
     elements.autoUpdate.checked = true;
     enforceCompatibleOptions();
+    updateSliderValues();
     applyStyle("classic");
     showToast("Studio reset.");
   });

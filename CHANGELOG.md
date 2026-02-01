@@ -9,6 +9,7 @@
 - Local settings persistence (saved to `localStorage`) and a “Reset studio” control.
 - Preview metadata (original/output dimensions); API returns output headers including processing time.
 - Cancel button to abort in-flight processing requests; client-side file validation (type/size).
+- Headroom control (crop top-bias) for smarter framing.
 
 ### Changed
 - Images are auto-oriented using EXIF metadata so previews/crops match how the photo was taken.

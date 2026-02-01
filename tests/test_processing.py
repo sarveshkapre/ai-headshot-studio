@@ -46,6 +46,7 @@ def test_process_passport_size() -> None:
         background="white",
         preset="passport-2x2",
         style=None,
+        top_bias=0.2,
         brightness=1.0,
         contrast=1.0,
         color=1.0,
@@ -66,6 +67,7 @@ def test_process_is_case_insensitive_for_keys() -> None:
         background="WHITE",
         preset="PASSPORT-2X2",
         style="CLASSIC",
+        top_bias=0.2,
         brightness=1.0,
         contrast=1.0,
         color=1.0,
@@ -84,6 +86,7 @@ def test_process_rejects_nan_values() -> None:
         background="white",
         preset="passport-2x2",
         style=None,
+        top_bias=0.2,
         brightness=float("nan"),
         contrast=1.0,
         color=1.0,
@@ -93,6 +96,23 @@ def test_process_rejects_nan_values() -> None:
     )
     with pytest.raises(ProcessingError):
         process_image(data, req)
+
+
+def test_crop_to_aspect_top_bias_changes_vertical_crop() -> None:
+    image = Image.new("RGB", (100, 200))
+    for y in range(0, 100):
+        for x in range(0, 100):
+            image.putpixel((x, y), (255, 0, 0))
+    for y in range(100, 200):
+        for x in range(0, 100):
+            image.putpixel((x, y), (0, 0, 255))
+
+    top = crop_to_aspect(image, ratio=1.0, top_bias=0.0)
+    bottom = crop_to_aspect(image, ratio=1.0, top_bias=1.0)
+    assert top.size == (100, 100)
+    assert bottom.size == (100, 100)
+    assert top.getpixel((10, 10)) == (255, 0, 0)
+    assert bottom.getpixel((10, 10)) == (0, 0, 255)
 
 
 def test_load_image_applies_exif_orientation() -> None:
