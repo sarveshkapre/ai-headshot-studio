@@ -16,6 +16,7 @@ const elements = {
   dropzone: document.getElementById("dropzone"),
   removeBg: document.getElementById("removeBg"),
   background: document.getElementById("background"),
+  resetBackground: document.getElementById("resetBackground"),
   preset: document.getElementById("preset"),
   format: document.getElementById("format"),
   autoUpdate: document.getElementById("autoUpdate"),
@@ -653,6 +654,15 @@ function bindEvents() {
     updateBackgroundSwatch();
     setZoomMode("fit");
     showToast("Studio reset.");
+  });
+  elements.resetBackground.addEventListener("click", () => {
+    elements.removeBg.checked = false;
+    elements.background.value = "white";
+    enforceCompatibleOptions();
+    updateBackgroundSwatch();
+    queueProcess();
+    scheduleSaveSettings();
+    showToast("Background reset.");
   });
   elements.toastDismiss.addEventListener("click", () => hideToast());
   elements.toggleZoom.addEventListener("click", () => {

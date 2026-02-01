@@ -14,6 +14,7 @@
 - Added JPEG quality control for smaller/larger exports.
 - Added output size metadata (KB/MB) to the preview.
 - Added clipboard paste upload for quick image input.
+- Added a one-click background reset.
 
 ## Verification
 Commands run:
