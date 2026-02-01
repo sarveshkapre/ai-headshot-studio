@@ -32,6 +32,8 @@ More: see `docs/PROJECT.md`.
 - Applied EXIF orientation on load so crops/previews match how photos were taken.
 - Style presets now apply to sliders (and slider tweaks automatically switch to Manual).
 - Added a one-click slider reset to neutral values.
+- Persisted studio settings locally (style, sliders, background, crop, format) for a smoother workflow.
+- Added “Reset studio” to return to defaults.
 
 ## Next to ship
 - Face-guided crop framing (lightweight detector).

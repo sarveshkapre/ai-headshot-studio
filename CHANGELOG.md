@@ -6,6 +6,7 @@
 - In-app, dismissible error banner in the studio UI (no blocking browser alerts).
 - Keyboard accessibility for the upload dropzone and `Ctrl/⌘ + Enter` to process.
 - Manual mode + one-click reset for retouch sliders.
+- Local settings persistence (saved to `localStorage`) and a “Reset studio” control.
 
 ### Changed
 - Images are auto-oriented using EXIF metadata so previews/crops match how the photo was taken.

@@ -4,6 +4,7 @@
 - Shipped offline-first UI polish (removed Google Fonts), better error UX, and improved keyboard accessibility.
 - Made image processing more robust (EXIF auto-orientation, tighter request normalization, and upload size-limited reads).
 - Improved style preset UX: presets now populate sliders, edits switch to Manual, and sliders have a one-click reset.
+- Persisted studio settings locally (saved to `localStorage`) and added a “Reset studio” button.
 
 ## Verification
 Commands run:

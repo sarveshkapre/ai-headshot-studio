@@ -7,6 +7,8 @@ const state = {
   debounce: null,
   processedUrl: null,
   toastTimer: null,
+  saveTimer: null,
+  saved: null,
 };
 
 const elements = {
@@ -20,6 +22,7 @@ const elements = {
   processBtn: document.getElementById("processBtn"),
   downloadBtn: document.getElementById("downloadBtn"),
   resetSliders: document.getElementById("resetSliders"),
+  resetStudio: document.getElementById("resetStudio"),
   originalPreview: document.getElementById("originalPreview"),
   processedPreview: document.getElementById("processedPreview"),
   loading: document.getElementById("loading"),
@@ -45,6 +48,53 @@ const elements = {
 
 function setStatusLoading(isLoading) {
   elements.loading.classList.toggle("show", isLoading);
+}
+
+const STORAGE_KEY = "ai-headshot-studio:settings:v1";
+
+function safeParseJSON(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function readSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = safeParseJSON(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeSettings(settings) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch {}
+}
+
+function scheduleSaveSettings() {
+  if (state.saveTimer) {
+    clearTimeout(state.saveTimer);
+  }
+  state.saveTimer = setTimeout(() => {
+    state.saveTimer = null;
+    const settings = {
+      removeBg: elements.removeBg.checked,
+      background: elements.background.value,
+      preset: elements.preset.value,
+      format: elements.format.value,
+      autoUpdate: elements.autoUpdate.checked,
+      style: state.style,
+      sliders: getCurrentSliderValues(),
+    };
+    writeSettings(settings);
+  }, 250);
 }
 
 function showToast(message) {
@@ -100,6 +150,28 @@ function neutralSliders() {
   };
 }
 
+function applySavedSettings() {
+  if (!state.saved) return;
+  if (typeof state.saved.removeBg === "boolean") {
+    elements.removeBg.checked = state.saved.removeBg;
+  }
+  if (typeof state.saved.background === "string") {
+    elements.background.value = state.saved.background;
+  }
+  if (typeof state.saved.format === "string") {
+    elements.format.value = state.saved.format;
+  }
+  if (typeof state.saved.autoUpdate === "boolean") {
+    elements.autoUpdate.checked = state.saved.autoUpdate;
+  }
+  if (typeof state.saved.preset === "string") {
+    state.preset = state.saved.preset;
+  }
+  if (typeof state.saved.style === "string") {
+    state.style = state.saved.style;
+  }
+}
+
 function getCurrentSliderValues() {
   return {
     brightness: Number(elements.sliders.brightness.value),
@@ -136,7 +208,15 @@ function syncStyleIfSlidersChanged() {
 function applyStyle(styleKey) {
   if (styleKey === "manual") {
     setStyleSelection("manual");
+    if (state.saved?.style === "manual" && state.saved?.sliders) {
+      setSliders({
+        ...neutralSliders(),
+        ...state.saved.sliders,
+      });
+      state.saved = { ...state.saved, sliders: null };
+    }
     queueProcess();
+    scheduleSaveSettings();
     return;
   }
   const style = state.styles[styleKey];
@@ -148,6 +228,7 @@ function applyStyle(styleKey) {
   setSliders(style);
   setStyleSelection(styleKey);
   queueProcess();
+  scheduleSaveSettings();
 }
 
 function createStyleCard(style) {
@@ -179,6 +260,9 @@ async function loadPresets() {
     }
     elements.preset.appendChild(option);
   });
+  if (state.preset) {
+    elements.preset.value = state.preset;
+  }
 
   elements.styleGrid.innerHTML = "";
   state.styles = {};
@@ -193,6 +277,8 @@ async function loadPresets() {
     state.style = "manual";
   }
   applyStyle(state.style);
+  enforceCompatibleOptions();
+  updateSliderValues();
 }
 
 function setFile(file) {
@@ -343,28 +429,53 @@ function bindEvents() {
       updateSliderValues();
       syncStyleIfSlidersChanged();
       queueProcess();
+      scheduleSaveSettings();
     });
   });
 
   elements.removeBg.addEventListener("change", () => {
     enforceCompatibleOptions();
     queueProcess();
+    scheduleSaveSettings();
   });
   elements.background.addEventListener("change", () => {
     enforceCompatibleOptions();
     queueProcess();
+    scheduleSaveSettings();
   });
-  elements.preset.addEventListener("change", () => queueProcess());
+  elements.preset.addEventListener("change", () => {
+    queueProcess();
+    scheduleSaveSettings();
+  });
   elements.format.addEventListener("change", () => {
     enforceCompatibleOptions();
     queueProcess();
+    scheduleSaveSettings();
   });
-  elements.autoUpdate.addEventListener("change", () => queueProcess());
+  elements.autoUpdate.addEventListener("change", () => {
+    queueProcess();
+    scheduleSaveSettings();
+  });
   elements.processBtn.addEventListener("click", () => processImage());
   elements.resetSliders.addEventListener("click", () => {
     setSliders(neutralSliders());
     setStyleSelection("manual");
     queueProcess();
+    scheduleSaveSettings();
+  });
+  elements.resetStudio.addEventListener("click", () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    state.saved = null;
+    elements.removeBg.checked = false;
+    elements.background.value = "white";
+    elements.preset.value = "portrait-4x5";
+    elements.format.value = "png";
+    elements.autoUpdate.checked = true;
+    enforceCompatibleOptions();
+    applyStyle("classic");
+    showToast("Studio reset.");
   });
   elements.toastDismiss.addEventListener("click", () => hideToast());
 
@@ -379,5 +490,7 @@ function bindEvents() {
 }
 
 updateSliderValues();
+state.saved = readSettings();
+applySavedSettings();
 loadPresets();
 bindEvents();
