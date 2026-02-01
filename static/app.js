@@ -4,6 +4,8 @@ const state = {
   style: "classic",
   controller: null,
   debounce: null,
+  processedUrl: null,
+  toastTimer: null,
 };
 
 const elements = {
@@ -20,6 +22,9 @@ const elements = {
   processedPreview: document.getElementById("processedPreview"),
   loading: document.getElementById("loading"),
   styleGrid: document.getElementById("styleGrid"),
+  toast: document.getElementById("toast"),
+  toastMessage: document.getElementById("toastMessage"),
+  toastDismiss: document.getElementById("toastDismiss"),
   sliders: {
     brightness: document.getElementById("brightness"),
     contrast: document.getElementById("contrast"),
@@ -38,6 +43,27 @@ const elements = {
 
 function setStatusLoading(isLoading) {
   elements.loading.classList.toggle("show", isLoading);
+}
+
+function showToast(message) {
+  if (!message) return;
+  elements.toastMessage.textContent = message;
+  elements.toast.hidden = false;
+  if (state.toastTimer) {
+    clearTimeout(state.toastTimer);
+  }
+  state.toastTimer = setTimeout(() => {
+    hideToast();
+  }, 6500);
+}
+
+function hideToast() {
+  if (state.toastTimer) {
+    clearTimeout(state.toastTimer);
+    state.toastTimer = null;
+  }
+  elements.toast.hidden = true;
+  elements.toastMessage.textContent = "";
 }
 
 function updateSliderValues() {
@@ -86,12 +112,29 @@ function selectStyle(styleKey) {
 function setFile(file) {
   state.file = file;
   elements.downloadBtn.disabled = true;
+  hideToast();
+  if (state.processedUrl) {
+    URL.revokeObjectURL(state.processedUrl);
+    state.processedUrl = null;
+  }
+  elements.processedPreview.removeAttribute("src");
   const reader = new FileReader();
   reader.onload = () => {
     elements.originalPreview.src = reader.result;
   };
   reader.readAsDataURL(file);
   queueProcess(true);
+}
+
+function enforceCompatibleOptions() {
+  if (elements.background.value === "transparent") {
+    if (!elements.removeBg.checked) {
+      elements.removeBg.checked = true;
+    }
+    if (elements.format.value === "jpeg") {
+      elements.format.value = "png";
+    }
+  }
 }
 
 function queueProcess(force = false) {
@@ -122,7 +165,11 @@ function formDataFromState() {
 }
 
 async function processImage() {
-  if (!state.file) return;
+  if (!state.file) {
+    showToast("Choose a photo first.");
+    elements.dropzone.focus();
+    return;
+  }
 
   if (state.controller) {
     state.controller.abort();
@@ -138,23 +185,31 @@ async function processImage() {
     });
 
     if (!response.ok) {
-      const detail = await response.json();
-      throw new Error(detail.detail || "Processing failed.");
+      let message = "Processing failed.";
+      try {
+        const detail = await response.json();
+        message = detail.detail || message;
+      } catch {}
+      throw new Error(message);
     }
 
+    if (state.processedUrl) {
+      URL.revokeObjectURL(state.processedUrl);
+      state.processedUrl = null;
+    }
     const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    elements.processedPreview.src = url;
+    state.processedUrl = URL.createObjectURL(blob);
+    elements.processedPreview.src = state.processedUrl;
     elements.downloadBtn.disabled = false;
     elements.downloadBtn.onclick = () => {
       const link = document.createElement("a");
-      link.href = url;
+      link.href = state.processedUrl;
       link.download = `headshot.${elements.format.value}`;
       link.click();
     };
   } catch (error) {
     if (error.name !== "AbortError") {
-      alert(error.message);
+      showToast(error.message || "Processing failed.");
     }
   } finally {
     setStatusLoading(false);
@@ -166,6 +221,17 @@ function bindEvents() {
     const file = event.target.files[0];
     if (file) {
       setFile(file);
+    }
+  });
+
+  elements.dropzone.addEventListener("click", () => {
+    elements.fileInput.click();
+  });
+
+  elements.dropzone.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      elements.fileInput.click();
     }
   });
 
@@ -194,16 +260,29 @@ function bindEvents() {
     });
   });
 
-  elements.removeBg.addEventListener("change", () => queueProcess());
-  elements.background.addEventListener("change", () => queueProcess());
+  elements.removeBg.addEventListener("change", () => {
+    enforceCompatibleOptions();
+    queueProcess();
+  });
+  elements.background.addEventListener("change", () => {
+    enforceCompatibleOptions();
+    queueProcess();
+  });
   elements.preset.addEventListener("change", () => queueProcess());
-  elements.format.addEventListener("change", () => queueProcess());
+  elements.format.addEventListener("change", () => {
+    enforceCompatibleOptions();
+    queueProcess();
+  });
   elements.autoUpdate.addEventListener("change", () => queueProcess());
   elements.processBtn.addEventListener("click", () => processImage());
+  elements.toastDismiss.addEventListener("click", () => hideToast());
 
   document.addEventListener("keydown", (event) => {
-    if (event.ctrlKey && event.key === "Enter") {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
       processImage();
+    }
+    if (event.key === "Escape") {
+      hideToast();
     }
   });
 }

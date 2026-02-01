@@ -7,6 +7,8 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from ai_headshot_studio.processing import (
+    MAX_UPLOAD_BYTES,
+    MAX_UPLOAD_MB,
     ProcessingError,
     ProcessRequest,
     available_presets,
@@ -27,6 +29,17 @@ def parse_bool(value: str | None, default: bool = False) -> bool:
     if value is None:
         return default
     return value.lower() in {"1", "true", "yes", "on"}
+
+
+async def read_upload_limited(upload: UploadFile, max_bytes: int) -> bytes:
+    buffer = bytearray()
+    while True:
+        chunk = await upload.read(1024 * 1024)
+        if not chunk:
+            return bytes(buffer)
+        buffer.extend(chunk)
+        if len(buffer) > max_bytes:
+            raise HTTPException(status_code=413, detail=f"File too large. Max {MAX_UPLOAD_MB}MB.")
 
 
 @app.get("/")
@@ -58,7 +71,8 @@ async def process(
     soften: float = Form(0.0),
     format: str = Form("png"),
 ) -> StreamingResponse:
-    data = await image.read()
+    data = await read_upload_limited(image, MAX_UPLOAD_BYTES)
+    output_format = format.strip().lower()
     req = ProcessRequest(
         remove_bg=parse_bool(remove_bg),
         background=background,
@@ -69,13 +83,13 @@ async def process(
         color=color,
         sharpness=sharpness,
         soften=soften,
-        output_format=format,
+        output_format=output_format,
     )
     try:
         result = process_image(data, req)
-        payload = to_bytes(result, req.output_format)
+        payload = to_bytes(result, output_format)
     except ProcessingError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    media_type = "image/png" if req.output_format == "png" else "image/jpeg"
+    media_type = "image/png" if output_format == "png" else "image/jpeg"
     return StreamingResponse(iter([payload]), media_type=media_type)

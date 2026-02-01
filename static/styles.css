@@ -17,7 +17,7 @@
 
 body {
   margin: 0;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--text);
   background: radial-gradient(circle at top, #1d2440 0%, var(--bg) 45%);
   min-height: 100vh;
@@ -89,6 +89,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   min-height: 140px;
   border: 1px dashed rgba(255, 255, 255, 0.2);
   background: linear-gradient(145deg, rgba(110, 231, 249, 0.08), rgba(255, 184, 107, 0.12));
@@ -326,6 +327,38 @@ input[type="range"] {
 
 .hint {
   color: var(--muted);
+}
+
+.toast {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 184, 107, 0.12);
+  border: 1px solid rgba(255, 184, 107, 0.3);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toast__message {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.toast__dismiss {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.toast__dismiss:hover {
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 @media (max-width: 1000px) {

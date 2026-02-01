@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import io
+import math
 from dataclasses import dataclass
 
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 from ai_headshot_studio.presets import PRESETS, STYLES
 
 MAX_UPLOAD_MB = 12
+MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 MAX_PIXELS = 20_000_000
 
 
@@ -30,14 +32,15 @@ class ProcessRequest:
 
 
 def validate_bytes(data: bytes) -> None:
-    if len(data) > MAX_UPLOAD_MB * 1024 * 1024:
-        raise ProcessingError("File too large. Max 12MB.")
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise ProcessingError(f"File too large. Max {MAX_UPLOAD_MB}MB.")
 
 
 def load_image(data: bytes) -> Image.Image:
     try:
         image = Image.open(io.BytesIO(data))
         image.load()
+        image = ImageOps.exif_transpose(image)
     except Exception as exc:  # pragma: no cover - PIL internal
         raise ProcessingError("Unsupported or corrupted image.") from exc
     if image.width * image.height > MAX_PIXELS:
@@ -64,7 +67,8 @@ def remove_background(image: Image.Image) -> Image.Image:
 
 
 def apply_background(image: Image.Image, background: str) -> Image.Image:
-    if background == "transparent":
+    background_key = background.strip().lower()
+    if background_key == "transparent":
         return to_rgba(image)
 
     colors: dict[str, tuple[int, int, int]] = {
@@ -73,10 +77,17 @@ def apply_background(image: Image.Image, background: str) -> Image.Image:
         "blue": (229, 236, 245),
         "gray": (230, 230, 230),
     }
-    if background not in colors:
+    if background_key not in colors:
         raise ProcessingError("Unsupported background color.")
-    base = Image.new("RGBA", image.size, colors[background] + (255,))
+    base = Image.new("RGBA", image.size, colors[background_key] + (255,))
     return Image.alpha_composite(base, to_rgba(image))
+
+
+def normalize_output_format(value: str) -> str:
+    fmt = value.strip().lower()
+    if fmt not in {"png", "jpeg"}:
+        raise ProcessingError("Unsupported output format.")
+    return fmt
 
 
 def apply_adjustments(image: Image.Image, req: ProcessRequest) -> Image.Image:
@@ -117,25 +128,50 @@ def resize_if_needed(image: Image.Image, width: int | None, height: int | None) 
 
 
 def normalize_request(req: ProcessRequest) -> ProcessRequest:
-    if req.style and req.style in STYLES:
-        style = STYLES[req.style]
+    preset = req.preset.strip().lower()
+    background = req.background.strip().lower()
+    output_format = normalize_output_format(req.output_format)
+    style_key = req.style.strip().lower() if req.style else None
+
+    if style_key is not None and style_key not in STYLES:
+        raise ProcessingError("Unknown style preset.")
+
+    if style_key is not None:
+        style = STYLES[style_key]
         return ProcessRequest(
             remove_bg=req.remove_bg,
-            background=req.background,
-            preset=req.preset,
-            style=req.style,
+            background=background,
+            preset=preset,
+            style=style_key,
             brightness=style.get("brightness", req.brightness),
             contrast=style.get("contrast", req.contrast),
             color=style.get("color", req.color),
             sharpness=style.get("sharpness", req.sharpness),
             soften=style.get("soften", req.soften),
-            output_format=req.output_format,
+            output_format=output_format,
         )
-    return req
+    return ProcessRequest(
+        remove_bg=req.remove_bg,
+        background=background,
+        preset=preset,
+        style=None,
+        brightness=req.brightness,
+        contrast=req.contrast,
+        color=req.color,
+        sharpness=req.sharpness,
+        soften=req.soften,
+        output_format=output_format,
+    )
 
 
 def clamp(value: float, min_value: float, max_value: float) -> float:
     return max(min_value, min(max_value, value))
+
+
+def ensure_finite(value: float, label: str) -> float:
+    if not math.isfinite(value):
+        raise ProcessingError(f"Invalid value for {label}.")
+    return value
 
 
 def clamp_request(req: ProcessRequest) -> ProcessRequest:
@@ -144,19 +180,20 @@ def clamp_request(req: ProcessRequest) -> ProcessRequest:
         background=req.background,
         preset=req.preset,
         style=req.style,
-        brightness=clamp(req.brightness, 0.5, 1.5),
-        contrast=clamp(req.contrast, 0.5, 1.5),
-        color=clamp(req.color, 0.5, 1.5),
-        sharpness=clamp(req.sharpness, 0.5, 1.8),
-        soften=clamp(req.soften, 0.0, 1.0),
+        brightness=clamp(ensure_finite(req.brightness, "brightness"), 0.5, 1.5),
+        contrast=clamp(ensure_finite(req.contrast, "contrast"), 0.5, 1.5),
+        color=clamp(ensure_finite(req.color, "color"), 0.5, 1.5),
+        sharpness=clamp(ensure_finite(req.sharpness, "sharpness"), 0.5, 1.8),
+        soften=clamp(ensure_finite(req.soften, "soften"), 0.0, 1.0),
         output_format=req.output_format,
     )
 
 
 def ensure_preset(preset_key: str) -> tuple[float, int | None, int | None]:
-    if preset_key not in PRESETS:
+    key = preset_key.strip().lower()
+    if key not in PRESETS:
         raise ProcessingError("Unknown crop preset.")
-    preset = PRESETS[preset_key]
+    preset = PRESETS[key]
     return preset.ratio, preset.width, preset.height
 
 
@@ -194,7 +231,7 @@ def to_bytes(image: Image.Image, output_format: str) -> bytes:
             image = image.convert("RGB")
         image.save(buffer, format="JPEG", quality=92, optimize=True)
     else:
-        image.save(buffer, format="PNG")
+        image.save(buffer, format="PNG", optimize=True)
     return buffer.getvalue()
 
 
