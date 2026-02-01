@@ -10,9 +10,4 @@ Commands run:
 - `make build`
 
 ## PR
-If `gh` is available and you’re authenticated:
-- `git push -u origin <branch>`
-- `gh pr create --fill`
-
-If not:
-- Push the branch, then open a PR in GitHub with title: `Headshot Studio: UX polish + EXIF orientation`
+- Opened: https://github.com/sarveshkapre/ai-headshot-studio/pull/1
