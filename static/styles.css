@@ -322,6 +322,55 @@ input[type="range"] {
   position: relative;
 }
 
+.compare {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.compare__image {
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: #0b0f1d;
+  min-height: 240px;
+  object-fit: contain;
+  display: block;
+}
+
+.compare__image.preview__image--actual {
+  width: auto;
+  max-width: none;
+  height: auto;
+  object-fit: unset;
+}
+
+.compare__image--before {
+  position: absolute;
+  inset: 0;
+  clip-path: inset(0 50% 0 0);
+}
+
+.compare__slider {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: ew-resize;
+}
+
+.compare__line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+}
+
 .loading {
   position: absolute;
   inset: 0;

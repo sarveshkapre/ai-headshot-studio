@@ -10,6 +10,7 @@
 - Added headroom control (top-bias) to fine-tune crop framing.
 - Added a preview zoom toggle (fit vs actual size).
 - Added a background swatch preview for quick visual confirmation.
+- Added a before/after comparison slider for the processed preview.
 
 ## Verification
 Commands run:

@@ -31,6 +31,9 @@ const elements = {
   originalMeta: document.getElementById("originalMeta"),
   processedMeta: document.getElementById("processedMeta"),
   toggleZoom: document.getElementById("toggleZoom"),
+  compareOriginal: document.getElementById("compareOriginal"),
+  compareSlider: document.getElementById("compareSlider"),
+  compareLine: document.querySelector(".compare__line"),
   toast: document.getElementById("toast"),
   toastMessage: document.getElementById("toastMessage"),
   toastDismiss: document.getElementById("toastDismiss"),
@@ -109,6 +112,7 @@ function setZoomMode(mode) {
   elements.toggleZoom.textContent = isActual ? "Fit to panel" : "Actual size";
   elements.originalPreview.classList.toggle("preview__image--actual", isActual);
   elements.processedPreview.classList.toggle("preview__image--actual", isActual);
+  elements.compareOriginal.classList.toggle("preview__image--actual", isActual);
   const processedFrame = elements.processedPreview.closest(".preview__frame");
   processedFrame?.classList.toggle("preview__frame--actual", isActual);
   writeZoomMode(mode);
@@ -356,6 +360,7 @@ function setFile(file) {
   const reader = new FileReader();
   reader.onload = () => {
     elements.originalPreview.src = reader.result;
+    elements.compareOriginal.src = reader.result;
     const img = new Image();
     img.onload = () => {
       elements.originalMeta.textContent = `${img.naturalWidth}×${img.naturalHeight}`;
@@ -471,6 +476,8 @@ async function processImage() {
     const blob = await response.blob();
     state.processedUrl = URL.createObjectURL(blob);
     elements.processedPreview.src = state.processedUrl;
+    elements.compareSlider.value = "50";
+    elements.compareLine.style.left = "50%";
     elements.downloadBtn.disabled = false;
     elements.downloadBtn.onclick = () => {
       const link = document.createElement("a");
@@ -604,6 +611,11 @@ function bindEvents() {
   elements.toggleZoom.addEventListener("click", () => {
     const current = readZoomMode();
     setZoomMode(current === "fit" ? "actual" : "fit");
+  });
+  elements.compareSlider.addEventListener("input", () => {
+    const value = Number(elements.compareSlider.value);
+    elements.compareOriginal.style.clipPath = `inset(0 ${100 - value}% 0 0)`;
+    elements.compareLine.style.left = `${value}%`;
   });
 
   document.addEventListener("keydown", (event) => {

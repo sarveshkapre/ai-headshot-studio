@@ -39,6 +39,7 @@ More: see `docs/PROJECT.md`.
 - Added headroom control (top-bias) to fine-tune crop framing.
 - Added a preview zoom toggle (fit vs actual size) for closer inspection.
 - Added a background color swatch preview next to the backdrop selector.
+- Added before/after comparison slider in the preview.
 
 ## Next to ship
 - Face-guided crop framing (lightweight detector).

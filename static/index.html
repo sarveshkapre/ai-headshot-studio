@@ -145,7 +145,21 @@
               <span>Processed</span>
               <div id="processedMeta" class="preview__meta"></div>
               <div class="preview__frame">
-                <img id="processedPreview" class="preview__image" alt="Processed preview" />
+                <div class="compare" aria-label="Before and after comparison">
+                  <img id="processedPreview" class="preview__image compare__image" alt="Processed preview" />
+                  <img id="compareOriginal" class="preview__image compare__image compare__image--before" alt="Original comparison" />
+                  <input
+                    id="compareSlider"
+                    class="compare__slider"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="50"
+                    aria-label="Comparison slider"
+                  />
+                  <div class="compare__line"></div>
+                </div>
                 <div id="loading" class="loading">Processing…</div>
               </div>
             </div>

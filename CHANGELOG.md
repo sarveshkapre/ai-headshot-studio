@@ -12,6 +12,7 @@
 - Headroom control (crop top-bias) for smarter framing.
 - Preview zoom toggle (fit vs actual size).
 - Background swatch preview next to backdrop selector.
+- Before/after comparison slider in the processed preview.
 
 ### Changed
 - Images are auto-oriented using EXIF metadata so previews/crops match how the photo was taken.
