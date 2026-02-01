@@ -34,6 +34,7 @@ const elements = {
   toast: document.getElementById("toast"),
   toastMessage: document.getElementById("toastMessage"),
   toastDismiss: document.getElementById("toastDismiss"),
+  backgroundSwatch: document.getElementById("backgroundSwatch"),
   sliders: {
     brightness: document.getElementById("brightness"),
     contrast: document.getElementById("contrast"),
@@ -376,6 +377,23 @@ function enforceCompatibleOptions() {
   }
 }
 
+function updateBackgroundSwatch() {
+  const value = elements.background.value;
+  const colors = {
+    white: "#ffffff",
+    light: "#f5f6f8",
+    blue: "#e5ecf5",
+    gray: "#e6e6e6",
+  };
+  if (value === "transparent") {
+    elements.backgroundSwatch.classList.add("swatch--transparent");
+    elements.backgroundSwatch.style.background = "";
+  } else {
+    elements.backgroundSwatch.classList.remove("swatch--transparent");
+    elements.backgroundSwatch.style.background = colors[value] || "#ffffff";
+  }
+}
+
 function queueProcess(force = false) {
   if (!state.file) return;
   if (!elements.autoUpdate.checked && !force) return;
@@ -526,11 +544,13 @@ function bindEvents() {
 
   elements.removeBg.addEventListener("change", () => {
     enforceCompatibleOptions();
+    updateBackgroundSwatch();
     queueProcess();
     scheduleSaveSettings();
   });
   elements.background.addEventListener("change", () => {
     enforceCompatibleOptions();
+    updateBackgroundSwatch();
     queueProcess();
     scheduleSaveSettings();
   });
@@ -576,6 +596,7 @@ function bindEvents() {
     enforceCompatibleOptions();
     updateSliderValues();
     applyStyle("classic");
+    updateBackgroundSwatch();
     setZoomMode("fit");
     showToast("Studio reset.");
   });
@@ -605,6 +626,7 @@ function bindEvents() {
 updateSliderValues();
 state.saved = readSettings();
 applySavedSettings();
+updateBackgroundSwatch();
 setZoomMode(readZoomMode());
 loadPresets();
 bindEvents();

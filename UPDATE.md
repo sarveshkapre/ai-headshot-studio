@@ -9,6 +9,7 @@
 - Added client-side file validation (type/size) and a Cancel button for in-flight processing.
 - Added headroom control (top-bias) to fine-tune crop framing.
 - Added a preview zoom toggle (fit vs actual size).
+- Added a background swatch preview for quick visual confirmation.
 
 ## Verification
 Commands run:
