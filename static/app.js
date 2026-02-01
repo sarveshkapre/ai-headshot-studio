@@ -27,6 +27,8 @@ const elements = {
   processedPreview: document.getElementById("processedPreview"),
   loading: document.getElementById("loading"),
   styleGrid: document.getElementById("styleGrid"),
+  originalMeta: document.getElementById("originalMeta"),
+  processedMeta: document.getElementById("processedMeta"),
   toast: document.getElementById("toast"),
   toastMessage: document.getElementById("toastMessage"),
   toastDismiss: document.getElementById("toastDismiss"),
@@ -285,6 +287,7 @@ function setFile(file) {
   state.file = file;
   elements.downloadBtn.disabled = true;
   hideToast();
+  elements.processedMeta.textContent = "";
   if (state.processedUrl) {
     URL.revokeObjectURL(state.processedUrl);
     state.processedUrl = null;
@@ -293,6 +296,11 @@ function setFile(file) {
   const reader = new FileReader();
   reader.onload = () => {
     elements.originalPreview.src = reader.result;
+    const img = new Image();
+    img.onload = () => {
+      elements.originalMeta.textContent = `${img.naturalWidth}×${img.naturalHeight}`;
+    };
+    img.src = reader.result;
   };
   reader.readAsDataURL(file);
   queueProcess(true);
@@ -362,6 +370,20 @@ async function processImage() {
         message = detail.detail || message;
       } catch {}
       throw new Error(message);
+    }
+
+    const width = response.headers.get("x-output-width");
+    const height = response.headers.get("x-output-height");
+    const fmt = response.headers.get("x-output-format");
+    const ms = response.headers.get("x-processing-ms");
+    if (width && height) {
+      const suffix = [];
+      if (fmt) suffix.push(fmt.toUpperCase());
+      if (ms) suffix.push(`${ms}ms`);
+      elements.processedMeta.textContent =
+        `${width}×${height}` + (suffix.length ? ` · ${suffix.join(" · ")}` : "");
+    } else {
+      elements.processedMeta.textContent = "";
     }
 
     if (state.processedUrl) {

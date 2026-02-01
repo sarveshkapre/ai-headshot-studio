@@ -256,6 +256,12 @@ input[type="range"] {
   color: var(--muted);
 }
 
+.preview__meta {
+  min-height: 1.1em;
+  font-size: 0.78rem;
+  color: rgba(170, 179, 210, 0.9);
+}
+
 .preview img {
   width: 100%;
   height: auto;

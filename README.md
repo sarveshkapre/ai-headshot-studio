@@ -25,6 +25,7 @@ docker run --rm -p 8000:8000 ai-headshot-studio
 ## API
 - `GET /api/presets` — list crop presets and styles
 - `POST /api/process` — multipart form data
+  - Response includes `X-Output-Width`, `X-Output-Height`, `X-Output-Format`, `X-Processing-Ms` headers
 
 ### `POST /api/process` fields
 - `image` (file, required)

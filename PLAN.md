@@ -34,6 +34,7 @@ More: see `docs/PROJECT.md`.
 - Added a one-click slider reset to neutral values.
 - Persisted studio settings locally (style, sliders, background, crop, format) for a smoother workflow.
 - Added “Reset studio” to return to defaults.
+- Added output metadata (dimensions/format/time) so users can verify sizing before download.
 
 ## Next to ship
 - Face-guided crop framing (lightweight detector).

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from PIL import Image
 
 from ai_headshot_studio.processing import (
     MAX_UPLOAD_BYTES,
@@ -29,6 +31,15 @@ def parse_bool(value: str | None, default: bool = False) -> bool:
     if value is None:
         return default
     return value.lower() in {"1", "true", "yes", "on"}
+
+
+def build_output_headers(image: Image.Image, output_format: str, elapsed_ms: int) -> dict[str, str]:
+    return {
+        "X-Output-Width": str(image.width),
+        "X-Output-Height": str(image.height),
+        "X-Output-Format": output_format,
+        "X-Processing-Ms": str(max(0, elapsed_ms)),
+    }
 
 
 async def read_upload_limited(upload: UploadFile, max_bytes: int) -> bytes:
@@ -86,10 +97,16 @@ async def process(
         output_format=output_format,
     )
     try:
+        start = time.perf_counter()
         result = process_image(data, req)
         payload = to_bytes(result, output_format)
     except ProcessingError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     media_type = "image/png" if output_format == "png" else "image/jpeg"
-    return StreamingResponse(iter([payload]), media_type=media_type)
+    elapsed_ms = int((time.perf_counter() - start) * 1000)
+    return StreamingResponse(
+        iter([payload]),
+        media_type=media_type,
+        headers=build_output_headers(result, output_format, elapsed_ms),
+    )

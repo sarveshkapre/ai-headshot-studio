@@ -5,6 +5,7 @@ import io
 import pytest
 from PIL import Image
 
+from ai_headshot_studio.app import build_output_headers
 from ai_headshot_studio.processing import (
     ProcessingError,
     ProcessRequest,
@@ -105,3 +106,12 @@ def test_available_styles_include_parameters() -> None:
     classic = styles["classic"]
     for key in ["brightness", "contrast", "color", "sharpness", "soften"]:
         assert key in classic
+
+
+def test_build_output_headers() -> None:
+    image = Image.new("RGB", (123, 456))
+    headers = build_output_headers(image, output_format="png", elapsed_ms=42)
+    assert headers["X-Output-Width"] == "123"
+    assert headers["X-Output-Height"] == "456"
+    assert headers["X-Output-Format"] == "png"
+    assert headers["X-Processing-Ms"] == "42"

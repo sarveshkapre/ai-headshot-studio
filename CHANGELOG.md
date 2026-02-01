@@ -7,6 +7,7 @@
 - Keyboard accessibility for the upload dropzone and `Ctrl/⌘ + Enter` to process.
 - Manual mode + one-click reset for retouch sliders.
 - Local settings persistence (saved to `localStorage`) and a “Reset studio” control.
+- Preview metadata (original/output dimensions); API returns output headers including processing time.
 
 ### Changed
 - Images are auto-oriented using EXIF metadata so previews/crops match how the photo was taken.
