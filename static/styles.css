@@ -209,6 +209,10 @@ input[type="range"] {
   margin-top: 8px;
 }
 
+.action-row .btn {
+  min-width: 0;
+}
+
 .btn {
   flex: 1;
   background: var(--accent);

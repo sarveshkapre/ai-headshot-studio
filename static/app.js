@@ -21,6 +21,7 @@ const elements = {
   autoUpdate: document.getElementById("autoUpdate"),
   processBtn: document.getElementById("processBtn"),
   downloadBtn: document.getElementById("downloadBtn"),
+  cancelBtn: document.getElementById("cancelBtn"),
   resetSliders: document.getElementById("resetSliders"),
   resetStudio: document.getElementById("resetStudio"),
   originalPreview: document.getElementById("originalPreview"),
@@ -50,7 +51,12 @@ const elements = {
 
 function setStatusLoading(isLoading) {
   elements.loading.classList.toggle("show", isLoading);
+  elements.cancelBtn.hidden = !isLoading;
+  elements.processBtn.disabled = isLoading;
+  elements.downloadBtn.disabled = isLoading || !state.processedUrl;
 }
+
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 const STORAGE_KEY = "ai-headshot-studio:settings:v1";
 
@@ -284,6 +290,19 @@ async function loadPresets() {
 }
 
 function setFile(file) {
+  if (!file || typeof file.size !== "number") {
+    showToast("Could not read that file.");
+    return;
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    showToast("File too large. Max 12MB.");
+    return;
+  }
+  if (!file.type || !file.type.startsWith("image/")) {
+    showToast("Unsupported file type. Please choose an image.");
+    return;
+  }
+
   state.file = file;
   elements.downloadBtn.disabled = true;
   hideToast();
@@ -405,6 +424,7 @@ async function processImage() {
       showToast(error.message || "Processing failed.");
     }
   } finally {
+    state.controller = null;
     setStatusLoading(false);
   }
 }
@@ -479,6 +499,14 @@ function bindEvents() {
     scheduleSaveSettings();
   });
   elements.processBtn.addEventListener("click", () => processImage());
+  elements.cancelBtn.addEventListener("click", () => {
+    if (state.controller) {
+      state.controller.abort();
+      state.controller = null;
+      setStatusLoading(false);
+      showToast("Canceled.");
+    }
+  });
   elements.resetSliders.addEventListener("click", () => {
     setSliders(neutralSliders());
     setStyleSelection("manual");
@@ -506,7 +534,14 @@ function bindEvents() {
       processImage();
     }
     if (event.key === "Escape") {
-      hideToast();
+      if (state.controller) {
+        state.controller.abort();
+        state.controller = null;
+        setStatusLoading(false);
+        showToast("Canceled.");
+      } else {
+        hideToast();
+      }
     }
   });
 }

@@ -6,6 +6,7 @@
 - Improved style preset UX: presets now populate sliders, edits switch to Manual, and sliders have a one-click reset.
 - Persisted studio settings locally (saved to `localStorage`) and added a “Reset studio” button.
 - Added output metadata headers and surfaced output dimensions/time in the preview.
+- Added client-side file validation (type/size) and a Cancel button for in-flight processing.
 
 ## Verification
 Commands run:
