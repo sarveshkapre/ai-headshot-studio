@@ -15,9 +15,10 @@
 - Before/after comparison slider in the processed preview.
 - JPEG quality control for exports.
 - Output size metadata (bytes) in preview.
-- Clipboard paste upload support.
-- One-click background reset.
-- Quick reset for crop/export controls.
+ - Clipboard paste upload support.
+ - One-click background reset.
+ - Quick reset for crop/export controls.
+- Recent export history (last 3) with quick download buttons.
 
 ### Changed
 - Images are auto-oriented using EXIF metadata so previews/crops match how the photo was taken.

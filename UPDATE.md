@@ -15,7 +15,8 @@
  - Added output size metadata (KB/MB) to the preview.
  - Added clipboard paste upload for quick image input.
  - Added a one-click background reset.
-- Added a quick reset for crop/export controls.
+ - Added a quick reset for crop/export controls.
+- Added recent export history (last 3) with download shortcuts.
 
 ## Verification
 Commands run:

@@ -401,6 +401,44 @@ input[type="range"] {
   gap: 8px;
 }
 
+.history-list {
+  display: grid;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.history-empty {
+  color: var(--muted);
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+}
+
+.history-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.history-title {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.history-sub {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 .footer {
   padding: 24px 8vw 40px;
   color: var(--muted);

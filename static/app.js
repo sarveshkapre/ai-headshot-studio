@@ -9,6 +9,7 @@ const state = {
   toastTimer: null,
   saveTimer: null,
   saved: null,
+  history: [],
 };
 
 const elements = {
@@ -36,6 +37,7 @@ const elements = {
   compareOriginal: document.getElementById("compareOriginal"),
   compareSlider: document.getElementById("compareSlider"),
   compareLine: document.querySelector(".compare__line"),
+  historyList: document.getElementById("historyList"),
   toast: document.getElementById("toast"),
   toastMessage: document.getElementById("toastMessage"),
   toastDismiss: document.getElementById("toastDismiss"),
@@ -393,6 +395,59 @@ function setFile(file) {
   queueProcess(true);
 }
 
+function renderHistory() {
+  elements.historyList.innerHTML = "";
+  if (state.history.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "history-empty";
+    empty.textContent = "No exports yet.";
+    elements.historyList.appendChild(empty);
+    return;
+  }
+  state.history.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "history-item";
+
+    const meta = document.createElement("div");
+    meta.className = "history-meta";
+    const title = document.createElement("div");
+    title.className = "history-title";
+    title.textContent = item.name;
+    const sub = document.createElement("div");
+    sub.className = "history-sub";
+    sub.textContent = item.detail;
+    meta.appendChild(title);
+    meta.appendChild(sub);
+
+    const button = document.createElement("button");
+    button.className = "btn btn--ghost btn--small";
+    button.type = "button";
+    button.textContent = "Download";
+    button.addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.href = item.url;
+      link.download = item.filename;
+      link.click();
+    });
+
+    row.appendChild(meta);
+    row.appendChild(button);
+    elements.historyList.appendChild(row);
+  });
+}
+
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes)) return "";
+  const units = ["B", "KB", "MB"];
+  let value = bytes;
+  let idx = 0;
+  while (value >= 1024 && idx < units.length - 1) {
+    value /= 1024;
+    idx += 1;
+  }
+  return `${value.toFixed(value < 10 ? 1 : 0)}${units[idx]}`;
+}
+
 function enforceCompatibleOptions() {
   if (elements.background.value === "transparent") {
     if (!elements.removeBg.checked) {
@@ -488,16 +543,9 @@ async function processImage() {
       if (fmt) suffix.push(fmt.toUpperCase());
       if (ms) suffix.push(`${ms}ms`);
       if (bytes) {
-        const size = Number(bytes);
-        if (Number.isFinite(size)) {
-          const units = ["B", "KB", "MB"];
-          let value = size;
-          let idx = 0;
-          while (value >= 1024 && idx < units.length - 1) {
-            value /= 1024;
-            idx += 1;
-          }
-          suffix.push(`${value.toFixed(value < 10 ? 1 : 0)}${units[idx]}`);
+        const sizeLabel = formatBytes(Number(bytes));
+        if (sizeLabel) {
+          suffix.push(sizeLabel);
         }
       }
       elements.processedMeta.textContent =
@@ -516,6 +564,35 @@ async function processImage() {
     elements.compareSlider.value = "50";
     elements.compareLine.style.left = "50%";
     elements.downloadBtn.disabled = false;
+    const size = bytes ? Number(bytes) : blob.size;
+    const detailParts = [];
+    if (width && height) {
+      detailParts.push(`${width}×${height}`);
+    }
+    if (fmt) {
+      detailParts.push(fmt.toUpperCase());
+    }
+    if (ms) {
+      detailParts.push(`${ms}ms`);
+    }
+    const sizeLabel = formatBytes(size);
+    if (sizeLabel) {
+      detailParts.push(sizeLabel);
+    }
+    const entry = {
+      url: state.processedUrl,
+      filename: `headshot.${elements.format.value}`,
+      name: `Export ${new Date().toLocaleTimeString()}`,
+      detail: detailParts.join(" · "),
+    };
+    state.history.unshift(entry);
+    if (state.history.length > 3) {
+      const removed = state.history.pop();
+      if (removed?.url) {
+        URL.revokeObjectURL(removed.url);
+      }
+    }
+    renderHistory();
     elements.downloadBtn.onclick = () => {
       const link = document.createElement("a");
       link.href = state.processedUrl;
