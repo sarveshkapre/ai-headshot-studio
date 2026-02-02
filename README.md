@@ -1,6 +1,6 @@
 # AI Headshot Studio
 
-Local-first headshot enhancer: background removal, lighting/retouch controls, and crop presets in a fast, minimalist studio UI. No accounts, no uploads to third parties.
+Local-first headshot enhancement studio for background removal, retouching, and headshot framing. No accounts, no third-party uploads.
 
 ## Features
 - Background removal (local `rembg`)

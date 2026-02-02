@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "ai-headshot-studio"
 version = "0.1.0"
-description = "Local-first headshot enhancer: background removal, lighting, retouch, crop presets."
+description = "Local-first headshot enhancement studio: background removal, retouching, headshot framing."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
