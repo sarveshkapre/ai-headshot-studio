@@ -76,6 +76,7 @@ async def process(
     image: UploadFile = File(...),  # noqa: B008
     remove_bg: str | None = Form(None),
     background: str = Form("white"),
+    background_hex: str | None = Form(None),
     preset: str = Form("portrait-4x5"),
     style: str | None = Form(None),
     top_bias: float = Form(0.2),
@@ -92,6 +93,7 @@ async def process(
     req = ProcessRequest(
         remove_bg=parse_bool(remove_bg),
         background=background,
+        background_hex=background_hex,
         preset=preset,
         style=style,
         top_bias=top_bias,

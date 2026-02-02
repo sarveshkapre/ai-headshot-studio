@@ -10,13 +10,18 @@ const state = {
   saveTimer: null,
   saved: null,
   history: [],
+  useCase: null,
+  isApplyingUseCase: false,
 };
 
 const elements = {
   fileInput: document.getElementById("fileInput"),
   dropzone: document.getElementById("dropzone"),
+  useCaseGrid: document.getElementById("useCaseGrid"),
   removeBg: document.getElementById("removeBg"),
   background: document.getElementById("background"),
+  backgroundCustom: document.getElementById("backgroundCustom"),
+  backgroundHex: document.getElementById("backgroundHex"),
   resetBackground: document.getElementById("resetBackground"),
   preset: document.getElementById("preset"),
   format: document.getElementById("format"),
@@ -29,11 +34,15 @@ const elements = {
   resetStudio: document.getElementById("resetStudio"),
   originalPreview: document.getElementById("originalPreview"),
   processedPreview: document.getElementById("processedPreview"),
+  originalEmpty: document.getElementById("originalEmpty"),
+  processedEmpty: document.getElementById("processedEmpty"),
   loading: document.getElementById("loading"),
   styleGrid: document.getElementById("styleGrid"),
   originalMeta: document.getElementById("originalMeta"),
   processedMeta: document.getElementById("processedMeta"),
   toggleZoom: document.getElementById("toggleZoom"),
+  toggleGuide: document.getElementById("toggleGuide"),
+  frameGuide: document.getElementById("frameGuide"),
   compareOriginal: document.getElementById("compareOriginal"),
   compareSlider: document.getElementById("compareSlider"),
   compareLine: document.querySelector(".compare__line"),
@@ -71,6 +80,7 @@ const elements = {
   exportSliderValues: {
     jpegQuality: document.getElementById("jpegQualityValue"),
   },
+  useCaseButtons: document.querySelectorAll("[data-use-case]"),
 };
 
 function setStatusLoading(isLoading) {
@@ -84,6 +94,40 @@ const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 const STORAGE_KEY = "ai-headshot-studio:settings:v1";
 const ZOOM_KEY = "ai-headshot-studio:preview-zoom:v1";
+const GUIDE_KEY = "ai-headshot-studio:framing-guide:v1";
+
+const USE_CASES = {
+  linkedin: {
+    label: "LinkedIn preset applied.",
+    removeBg: true,
+    background: "white",
+    preset: "square",
+    topBias: 0.18,
+    format: "jpeg",
+    jpegQuality: 92,
+    style: "studio",
+  },
+  resume: {
+    label: "Resume preset applied.",
+    removeBg: true,
+    background: "light",
+    preset: "portrait-4x5",
+    topBias: 0.2,
+    format: "png",
+    jpegQuality: 92,
+    style: "classic",
+  },
+  passport: {
+    label: "Passport preset applied.",
+    removeBg: true,
+    background: "white",
+    preset: "passport-2x2",
+    topBias: 0.16,
+    format: "jpeg",
+    jpegQuality: 92,
+    style: "classic",
+  },
+};
 
 function safeParseJSON(value) {
   try {
@@ -128,7 +172,31 @@ function setZoomMode(mode) {
   elements.compareOriginal.classList.toggle("preview__image--actual", isActual);
   const processedFrame = elements.processedPreview.closest(".preview__frame");
   processedFrame?.classList.toggle("preview__frame--actual", isActual);
+  const originalFrame = elements.originalPreview.closest(".preview__frame");
+  originalFrame?.classList.toggle("preview__frame--actual", isActual);
   writeZoomMode(mode);
+}
+
+function readGuideMode() {
+  try {
+    const value = localStorage.getItem(GUIDE_KEY);
+    return value === "on" ? "on" : "off";
+  } catch {
+    return "off";
+  }
+}
+
+function writeGuideMode(mode) {
+  try {
+    localStorage.setItem(GUIDE_KEY, mode);
+  } catch {}
+}
+
+function setGuideMode(mode) {
+  const isOn = mode === "on";
+  elements.toggleGuide.textContent = isOn ? "Guide: On" : "Guide: Off";
+  elements.frameGuide.classList.toggle("show", isOn);
+  writeGuideMode(mode);
 }
 
 function writeSettings(settings) {
@@ -146,12 +214,14 @@ function scheduleSaveSettings() {
     const settings = {
       removeBg: elements.removeBg.checked,
       background: elements.background.value,
+      backgroundHex: elements.backgroundHex.value,
       preset: elements.preset.value,
       topBias: Number(elements.cropSliders.topBias.value),
       format: elements.format.value,
       jpegQuality: Number(elements.exportSliders.jpegQuality.value),
       autoUpdate: elements.autoUpdate.checked,
       style: state.style,
+      useCase: state.useCase,
       sliders: getCurrentSliderValues(),
     };
     writeSettings(settings);
@@ -193,6 +263,26 @@ function updateSliderValues() {
   });
 }
 
+function setUseCaseSelection(key) {
+  state.useCase = key || null;
+  elements.useCaseButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.useCase === state.useCase);
+  });
+}
+
+function maybeClearUseCase() {
+  if (state.isApplyingUseCase) return;
+  setUseCaseSelection(null);
+}
+
+function updateBackgroundCustomVisibility() {
+  const isCustom = elements.background.value === "custom";
+  elements.backgroundCustom.hidden = !isCustom;
+  if (isCustom && !elements.backgroundHex.value) {
+    elements.backgroundHex.value = "#ffffff";
+  }
+}
+
 function setStyleSelection(styleKey) {
   state.style = styleKey;
   [...elements.styleGrid.children].forEach((child) => {
@@ -227,6 +317,9 @@ function applySavedSettings() {
   if (typeof state.saved.background === "string") {
     elements.background.value = state.saved.background;
   }
+  if (typeof state.saved.backgroundHex === "string") {
+    elements.backgroundHex.value = state.saved.backgroundHex;
+  }
   if (typeof state.saved.topBias === "number" && Number.isFinite(state.saved.topBias)) {
     elements.cropSliders.topBias.value = String(state.saved.topBias);
   }
@@ -244,6 +337,9 @@ function applySavedSettings() {
   }
   if (typeof state.saved.style === "string") {
     state.style = state.saved.style;
+  }
+  if (typeof state.saved.useCase === "string") {
+    state.useCase = state.saved.useCase;
   }
 }
 
@@ -306,12 +402,39 @@ function applyStyle(styleKey) {
   scheduleSaveSettings();
 }
 
+function applyUseCase(useCaseKey) {
+  const preset = USE_CASES[useCaseKey];
+  if (!preset) return;
+  state.isApplyingUseCase = true;
+  elements.removeBg.checked = preset.removeBg;
+  elements.background.value = preset.background;
+  elements.preset.value = preset.preset;
+  elements.cropSliders.topBias.value = String(preset.topBias);
+  elements.format.value = preset.format;
+  elements.exportSliders.jpegQuality.value = String(preset.jpegQuality);
+  elements.exportSliders.jpegQuality.disabled = preset.format !== "jpeg";
+  elements.autoUpdate.checked = true;
+  enforceCompatibleOptions();
+  updateBackgroundCustomVisibility();
+  updateBackgroundSwatch();
+  updateSliderValues();
+  applyStyle(preset.style);
+  setUseCaseSelection(useCaseKey);
+  state.isApplyingUseCase = false;
+  queueProcess(true);
+  scheduleSaveSettings();
+  showToast(preset.label);
+}
+
 function createStyleCard(style) {
   const card = document.createElement("div");
   card.className = "style-card";
   card.dataset.key = style.key;
   card.textContent = style.name;
-  card.addEventListener("click", () => applyStyle(style.key));
+  card.addEventListener("click", () => {
+    maybeClearUseCase();
+    applyStyle(style.key);
+  });
   return card;
 }
 
@@ -353,7 +476,9 @@ async function loadPresets() {
   }
   applyStyle(state.style);
   enforceCompatibleOptions();
+  updateBackgroundCustomVisibility();
   updateSliderValues();
+  setUseCaseSelection(state.useCase);
 }
 
 function setFile(file) {
@@ -374,6 +499,8 @@ function setFile(file) {
   elements.downloadBtn.disabled = true;
   hideToast();
   elements.processedMeta.textContent = "";
+  elements.originalEmpty.hidden = true;
+  elements.processedEmpty.hidden = false;
   if (state.processedUrl) {
     elements.compareSlider.value = "50";
     elements.compareLine.style.left = "50%";
@@ -460,6 +587,7 @@ function enforceCompatibleOptions() {
       elements.format.value = "png";
     }
   }
+  updateBackgroundCustomVisibility();
 }
 
 function updateBackgroundSwatch() {
@@ -470,7 +598,10 @@ function updateBackgroundSwatch() {
     blue: "#e5ecf5",
     gray: "#e6e6e6",
   };
-  if (value === "transparent") {
+  if (value === "custom") {
+    elements.backgroundSwatch.classList.remove("swatch--transparent");
+    elements.backgroundSwatch.style.background = elements.backgroundHex.value || "#ffffff";
+  } else if (value === "transparent") {
     elements.backgroundSwatch.classList.add("swatch--transparent");
     elements.backgroundSwatch.style.background = "";
   } else {
@@ -495,6 +626,9 @@ function formDataFromState() {
   data.append("image", state.file);
   data.append("remove_bg", elements.removeBg.checked ? "true" : "false");
   data.append("background", elements.background.value);
+  if (elements.background.value === "custom") {
+    data.append("background_hex", elements.backgroundHex.value || "#ffffff");
+  }
   data.append("preset", elements.preset.value);
   data.append("top_bias", elements.cropSliders.topBias.value);
   data.append("jpeg_quality", elements.exportSliders.jpegQuality.value);
@@ -564,6 +698,7 @@ async function processImage() {
     const blob = await response.blob();
     state.processedUrl = URL.createObjectURL(blob);
     elements.processedPreview.src = state.processedUrl;
+    elements.processedEmpty.hidden = true;
     elements.compareSlider.value = "50";
     elements.compareLine.style.left = "50%";
     elements.downloadBtn.disabled = false;
@@ -620,6 +755,15 @@ function bindEvents() {
     }
   });
 
+  elements.useCaseButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.useCase;
+      if (key) {
+        applyUseCase(key);
+      }
+    });
+  });
+
   elements.dropzone.addEventListener("click", () => {
     elements.fileInput.click();
   });
@@ -653,6 +797,7 @@ function bindEvents() {
     slider.addEventListener("input", () => {
       updateSliderValues();
       syncStyleIfSlidersChanged();
+      maybeClearUseCase();
       queueProcess();
       scheduleSaveSettings();
     });
@@ -661,6 +806,7 @@ function bindEvents() {
   Object.values(elements.cropSliders).forEach((slider) => {
     slider.addEventListener("input", () => {
       updateSliderValues();
+      maybeClearUseCase();
       queueProcess();
       scheduleSaveSettings();
     });
@@ -669,6 +815,7 @@ function bindEvents() {
   Object.values(elements.exportSliders).forEach((slider) => {
     slider.addEventListener("input", () => {
       updateSliderValues();
+      maybeClearUseCase();
       if (elements.format.value === "jpeg") {
         queueProcess();
       }
@@ -679,26 +826,37 @@ function bindEvents() {
   elements.removeBg.addEventListener("change", () => {
     enforceCompatibleOptions();
     updateBackgroundSwatch();
+    maybeClearUseCase();
     queueProcess();
     scheduleSaveSettings();
   });
   elements.background.addEventListener("change", () => {
     enforceCompatibleOptions();
     updateBackgroundSwatch();
+    maybeClearUseCase();
+    queueProcess();
+    scheduleSaveSettings();
+  });
+  elements.backgroundHex.addEventListener("input", () => {
+    updateBackgroundSwatch();
+    maybeClearUseCase();
     queueProcess();
     scheduleSaveSettings();
   });
   elements.preset.addEventListener("change", () => {
+    maybeClearUseCase();
     queueProcess();
     scheduleSaveSettings();
   });
   elements.format.addEventListener("change", () => {
     enforceCompatibleOptions();
+    maybeClearUseCase();
     queueProcess();
     elements.exportSliders.jpegQuality.disabled = elements.format.value !== "jpeg";
     scheduleSaveSettings();
   });
   elements.autoUpdate.addEventListener("change", () => {
+    maybeClearUseCase();
     queueProcess();
     scheduleSaveSettings();
   });
@@ -714,6 +872,7 @@ function bindEvents() {
   elements.resetSliders.addEventListener("click", () => {
     setSliders(neutralSliders());
     setStyleSelection("manual");
+    maybeClearUseCase();
     queueProcess();
     scheduleSaveSettings();
   });
@@ -724,16 +883,19 @@ function bindEvents() {
     state.saved = null;
     elements.removeBg.checked = false;
     elements.background.value = "white";
+    elements.backgroundHex.value = "#ffffff";
     elements.preset.value = "portrait-4x5";
     elements.cropSliders.topBias.value = "0.2";
     elements.format.value = "png";
     elements.exportSliders.jpegQuality.value = "92";
     elements.autoUpdate.checked = true;
+    setUseCaseSelection(null);
     enforceCompatibleOptions();
     updateSliderValues();
     applyStyle("classic");
     updateBackgroundSwatch();
     setZoomMode("fit");
+    setGuideMode("off");
     showToast("Studio reset.");
   });
   elements.resetCropExport.addEventListener("click", () => {
@@ -742,6 +904,7 @@ function bindEvents() {
     elements.format.value = "png";
     elements.exportSliders.jpegQuality.value = "92";
     elements.exportSliders.jpegQuality.disabled = true;
+    maybeClearUseCase();
     updateSliderValues();
     queueProcess();
     scheduleSaveSettings();
@@ -750,8 +913,10 @@ function bindEvents() {
   elements.resetBackground.addEventListener("click", () => {
     elements.removeBg.checked = false;
     elements.background.value = "white";
+    elements.backgroundHex.value = "#ffffff";
     enforceCompatibleOptions();
     updateBackgroundSwatch();
+    maybeClearUseCase();
     queueProcess();
     scheduleSaveSettings();
     showToast("Background reset.");
@@ -760,6 +925,10 @@ function bindEvents() {
   elements.toggleZoom.addEventListener("click", () => {
     const current = readZoomMode();
     setZoomMode(current === "fit" ? "actual" : "fit");
+  });
+  elements.toggleGuide.addEventListener("click", () => {
+    const current = readGuideMode();
+    setGuideMode(current === "on" ? "off" : "on");
   });
   elements.shortcutsBtn.addEventListener("click", () => {
     elements.modalOverlay.hidden = false;
@@ -793,6 +962,14 @@ function bindEvents() {
         elements.modalOverlay.hidden = true;
       }
     }
+    const target = event.target;
+    const isTextInput =
+      target &&
+      (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+    if (!isTextInput && event.key.toLowerCase() === "g") {
+      const current = readGuideMode();
+      setGuideMode(current === "on" ? "off" : "on");
+    }
   });
 
   document.addEventListener("paste", (event) => {
@@ -819,8 +996,10 @@ function bindEvents() {
 updateSliderValues();
 state.saved = readSettings();
 applySavedSettings();
+updateBackgroundCustomVisibility();
 updateBackgroundSwatch();
 elements.exportSliders.jpegQuality.disabled = elements.format.value !== "jpeg";
 setZoomMode(readZoomMode());
+setGuideMode(readGuideMode());
 loadPresets();
 bindEvents();

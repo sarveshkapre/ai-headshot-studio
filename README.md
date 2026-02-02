@@ -6,6 +6,8 @@ Local-first headshot enhancement studio for background removal, retouching, and 
 - Background removal (local `rembg`)
 - Lighting + retouch sliders (brightness, contrast, color, sharpness, soften)
 - Crop presets with headshot-friendly framing
+- One-click use-case presets (LinkedIn, resume, passport)
+- Custom background color picker + framing guide overlay
 - Downloadable PNG/JPEG output
 - Accessible, keyboard-friendly UI
 
@@ -30,7 +32,8 @@ docker run --rm -p 8000:8000 ai-headshot-studio
 ### `POST /api/process` fields
 - `image` (file, required)
 - `remove_bg` (`true|false`)
-- `background` (`white|light|blue|gray|transparent`)
+- `background` (`white|light|blue|gray|custom|transparent`)
+- `background_hex` (optional `#RRGGBB` or `#RGB` when `background=custom`)
 - `preset` (see `/api/presets`)
 - `style` (optional style name)
 - `top_bias` (0–1, higher = more headroom; default 0.2)

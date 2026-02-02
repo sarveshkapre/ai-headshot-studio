@@ -30,6 +30,25 @@
         </div>
 
         <div class="card">
+          <div class="card__title">Use cases</div>
+          <div class="use-case-grid" id="useCaseGrid">
+            <button class="use-case-card" data-use-case="linkedin" type="button">
+              <div class="use-case-title">LinkedIn</div>
+              <div class="use-case-sub">Square · Studio · JPEG</div>
+            </button>
+            <button class="use-case-card" data-use-case="resume" type="button">
+              <div class="use-case-title">Resume</div>
+              <div class="use-case-sub">4×5 · Clean · PNG</div>
+            </button>
+            <button class="use-case-card" data-use-case="passport" type="button">
+              <div class="use-case-title">Passport</div>
+              <div class="use-case-sub">2×2 · White · JPEG</div>
+            </button>
+          </div>
+          <small class="hint">One click loads recommended settings.</small>
+        </div>
+
+        <div class="card">
           <div class="card__title">Style presets</div>
           <div class="style-grid" id="styleGrid"></div>
         </div>
@@ -57,10 +76,15 @@
                 <option value="light">Soft light</option>
                 <option value="blue">Studio blue</option>
                 <option value="gray">Neutral gray</option>
+                <option value="custom">Custom color</option>
                 <option value="transparent">Transparent</option>
               </select>
               <span id="backgroundSwatch" class="swatch" aria-hidden="true"></span>
             </div>
+          </div>
+          <div id="backgroundCustom" class="select-row" hidden>
+            <label for="backgroundHex">Custom color</label>
+            <input id="backgroundHex" type="color" value="#ffffff" aria-label="Custom background color" />
           </div>
         </div>
 
@@ -149,13 +173,19 @@
         <div class="card preview-card">
           <div class="card__title-row">
             <div class="card__title">Preview</div>
-            <button id="toggleZoom" class="btn btn--ghost btn--small" type="button">Actual size</button>
+            <div class="button-group">
+              <button id="toggleGuide" class="btn btn--ghost btn--small" type="button">Guide: Off</button>
+              <button id="toggleZoom" class="btn btn--ghost btn--small" type="button">Actual size</button>
+            </div>
           </div>
           <div class="preview-grid">
             <div class="preview">
               <span>Original</span>
               <div id="originalMeta" class="preview__meta"></div>
-              <img id="originalPreview" class="preview__image" alt="Original preview" />
+              <div class="preview__frame">
+                <img id="originalPreview" class="preview__image" alt="Original preview" />
+                <div id="originalEmpty" class="preview-empty">Upload a photo to preview.</div>
+              </div>
             </div>
             <div class="preview">
               <span>Processed</span>
@@ -164,6 +194,11 @@
                 <div class="compare" aria-label="Before and after comparison">
                   <img id="processedPreview" class="preview__image compare__image" alt="Processed preview" />
                   <img id="compareOriginal" class="preview__image compare__image compare__image--before" alt="Original comparison" />
+                  <div id="frameGuide" class="frame-guide" aria-hidden="true">
+                    <div class="frame-guide__safe"></div>
+                    <div class="frame-guide__head"></div>
+                    <div class="frame-guide__shoulders"></div>
+                  </div>
                   <input
                     id="compareSlider"
                     class="compare__slider"
@@ -176,6 +211,7 @@
                   />
                   <div class="compare__line"></div>
                 </div>
+                <div id="processedEmpty" class="preview-empty">Process to see the result.</div>
                 <div id="loading" class="loading">Processing…</div>
               </div>
             </div>
@@ -215,6 +251,7 @@
           <li><strong>Ctrl/⌘ + Enter</strong> — Process image</li>
           <li><strong>Esc</strong> — Cancel processing / close dialogs</li>
           <li><strong>Paste</strong> — Paste an image from clipboard</li>
+          <li><strong>G</strong> — Toggle framing guide</li>
           <li><strong>Drag & drop</strong> — Drop a photo to upload</li>
         </ul>
       </div>

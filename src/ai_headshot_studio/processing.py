@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import math
+import string
 from dataclasses import dataclass
 
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
@@ -21,6 +22,7 @@ class ProcessingError(ValueError):
 class ProcessRequest:
     remove_bg: bool
     background: str
+    background_hex: str | None
     preset: str
     style: str | None
     top_bias: float
@@ -68,7 +70,27 @@ def remove_background(image: Image.Image) -> Image.Image:
     return Image.open(io.BytesIO(result))
 
 
-def apply_background(image: Image.Image, background: str) -> Image.Image:
+def normalize_hex_color(value: str | None) -> str | None:
+    if value is None:
+        return None
+    raw = value.strip()
+    if not raw:
+        return None
+    if raw.startswith("#"):
+        raw = raw[1:]
+    if len(raw) == 3:
+        raw = "".join(ch * 2 for ch in raw)
+    if len(raw) != 6 or any(ch not in string.hexdigits for ch in raw):
+        raise ProcessingError("Invalid custom background color.")
+    return f"#{raw.lower()}"
+
+
+def hex_to_rgb(value: str) -> tuple[int, int, int]:
+    raw = value.lstrip("#")
+    return (int(raw[0:2], 16), int(raw[2:4], 16), int(raw[4:6], 16))
+
+
+def apply_background(image: Image.Image, background: str, background_hex: str | None) -> Image.Image:
     background_key = background.strip().lower()
     if background_key == "transparent":
         return to_rgba(image)
@@ -79,9 +101,15 @@ def apply_background(image: Image.Image, background: str) -> Image.Image:
         "blue": (229, 236, 245),
         "gray": (230, 230, 230),
     }
-    if background_key not in colors:
+    if background_key == "custom":
+        if not background_hex:
+            raise ProcessingError("Custom background color required.")
+        color = hex_to_rgb(background_hex)
+    elif background_key in colors:
+        color = colors[background_key]
+    else:
         raise ProcessingError("Unsupported background color.")
-    base = Image.new("RGBA", image.size, colors[background_key] + (255,))
+    base = Image.new("RGBA", image.size, color + (255,))
     return Image.alpha_composite(base, to_rgba(image))
 
 
@@ -134,6 +162,10 @@ def normalize_request(req: ProcessRequest) -> ProcessRequest:
     background = req.background.strip().lower()
     output_format = normalize_output_format(req.output_format)
     style_key = req.style.strip().lower() if req.style else None
+    background_hex = normalize_hex_color(req.background_hex)
+
+    if background == "custom" and not background_hex:
+        raise ProcessingError("Custom background color required.")
 
     if style_key is not None and style_key not in STYLES:
         raise ProcessingError("Unknown style preset.")
@@ -143,6 +175,7 @@ def normalize_request(req: ProcessRequest) -> ProcessRequest:
         return ProcessRequest(
             remove_bg=req.remove_bg,
             background=background,
+            background_hex=background_hex,
             preset=preset,
             style=style_key,
             top_bias=req.top_bias,
@@ -157,6 +190,7 @@ def normalize_request(req: ProcessRequest) -> ProcessRequest:
     return ProcessRequest(
         remove_bg=req.remove_bg,
         background=background,
+        background_hex=background_hex,
         preset=preset,
         style=None,
         top_bias=req.top_bias,
@@ -184,6 +218,7 @@ def clamp_request(req: ProcessRequest) -> ProcessRequest:
     return ProcessRequest(
         remove_bg=req.remove_bg,
         background=req.background,
+        background_hex=req.background_hex,
         preset=req.preset,
         style=req.style,
         top_bias=clamp(ensure_finite(req.top_bias, "top_bias"), 0.0, 1.0),
@@ -215,7 +250,7 @@ def process_image(data: bytes, req: ProcessRequest) -> Image.Image:
         image = remove_background(image)
 
     if req.remove_bg or req.background != "transparent":
-        image = apply_background(to_rgba(image), req.background)
+        image = apply_background(to_rgba(image), req.background, req.background_hex)
 
     image = apply_adjustments(image, req)
 
