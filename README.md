@@ -7,6 +7,7 @@ Local-first headshot enhancement studio for background removal, retouching, and 
 - Lighting + retouch sliders (brightness, contrast, color, sharpness, soften)
 - Crop presets with headshot-friendly framing
 - One-click use-case presets (LinkedIn, resume, passport)
+- Preset export/import (JSON) for reusable studio setups
 - Custom background color picker + framing guide overlay
 - Downloadable PNG/JPEG output
 - Accessible, keyboard-friendly UI

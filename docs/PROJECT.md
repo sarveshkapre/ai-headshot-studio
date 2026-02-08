@@ -18,4 +18,4 @@ make release
 ## Next 3 improvements
 1. Add face-guided crop using a lightweight detector.
 2. Add batch mode for multiple uploads.
-3. Add preset export/import for studios.
+3. Add preset bundles (multiple named profiles) for studio workflows.

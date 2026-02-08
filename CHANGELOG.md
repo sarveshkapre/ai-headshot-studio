@@ -17,15 +17,18 @@
  - Output size metadata (bytes) in preview.
  - Clipboard paste upload support.
  - One-click background reset.
- - Quick reset for crop/export controls.
- - Recent export history (last 3) with quick download buttons.
+- Quick reset for crop/export controls.
+- Recent export history (last 3) with quick download buttons.
 - Keyboard shortcuts help modal.
+- Preset export/import controls (JSON) for reusing studio settings.
 
 ### Changed
 - Images are auto-oriented using EXIF metadata so previews/crops match how the photo was taken.
 - Upload reads are size-limited to 12MB during streaming to reduce memory spikes.
 - UI no longer pulls Google Fonts (fully local/offline-friendly after setup).
 - Style presets now populate slider values in the UI; `/api/presets` includes style parameters.
+- Make targets now run with either local `.venv` binaries or the active Python environment (CI-safe).
 
 ### Fixed
 - More consistent request normalization (case-insensitive preset/style/format/background handling).
+- Recent export history downloads no longer break after processing another image.

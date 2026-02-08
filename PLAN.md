@@ -51,4 +51,4 @@ More: see `docs/PROJECT.md`.
 ## Next to ship
 - Face-guided crop framing (lightweight detector).
 - Batch mode for multiple images.
-- Preset export/import.
+- Preset bundles (share multiple named profiles).

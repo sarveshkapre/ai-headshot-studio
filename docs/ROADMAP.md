@@ -3,7 +3,7 @@
 ## Near-term
 - Face-guided crop + headroom controls
 - Batch processing workflow
-- Preset export/import
+- Preset sharing improvements (multi-preset bundles + validation)
 
 ## Later
 - Skin-tone consistency check
