@@ -319,6 +319,12 @@ input[type="range"] {
   display: flex;
   gap: 12px;
   margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.action-row--compact {
+  margin-top: -2px;
+  gap: 8px;
 }
 
 .action-row .btn {

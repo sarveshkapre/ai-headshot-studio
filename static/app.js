@@ -30,6 +30,9 @@ const elements = {
   processBtn: document.getElementById("processBtn"),
   downloadBtn: document.getElementById("downloadBtn"),
   cancelBtn: document.getElementById("cancelBtn"),
+  exportPresetBtn: document.getElementById("exportPresetBtn"),
+  importPresetBtn: document.getElementById("importPresetBtn"),
+  importPresetInput: document.getElementById("importPresetInput"),
   resetSliders: document.getElementById("resetSliders"),
   resetStudio: document.getElementById("resetStudio"),
   originalPreview: document.getElementById("originalPreview"),
@@ -205,26 +208,29 @@ function writeSettings(settings) {
   } catch {}
 }
 
+function collectCurrentSettings() {
+  return {
+    removeBg: elements.removeBg.checked,
+    background: elements.background.value,
+    backgroundHex: elements.backgroundHex.value,
+    preset: elements.preset.value,
+    topBias: Number(elements.cropSliders.topBias.value),
+    format: elements.format.value,
+    jpegQuality: Number(elements.exportSliders.jpegQuality.value),
+    autoUpdate: elements.autoUpdate.checked,
+    style: state.style,
+    useCase: state.useCase,
+    sliders: getCurrentSliderValues(),
+  };
+}
+
 function scheduleSaveSettings() {
   if (state.saveTimer) {
     clearTimeout(state.saveTimer);
   }
   state.saveTimer = setTimeout(() => {
     state.saveTimer = null;
-    const settings = {
-      removeBg: elements.removeBg.checked,
-      background: elements.background.value,
-      backgroundHex: elements.backgroundHex.value,
-      preset: elements.preset.value,
-      topBias: Number(elements.cropSliders.topBias.value),
-      format: elements.format.value,
-      jpegQuality: Number(elements.exportSliders.jpegQuality.value),
-      autoUpdate: elements.autoUpdate.checked,
-      style: state.style,
-      useCase: state.useCase,
-      sliders: getCurrentSliderValues(),
-    };
-    writeSettings(settings);
+    writeSettings(collectCurrentSettings());
   }, 250);
 }
 
@@ -355,6 +361,165 @@ function getCurrentSliderValues() {
 
 function floatsEqual(a, b, epsilon = 0.005) {
   return Math.abs(a - b) <= epsilon;
+}
+
+function clampNumber(value, min, max, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.max(min, Math.min(max, numeric));
+}
+
+function normalizeSliderValues(rawValues) {
+  const defaults = neutralSliders();
+  if (!rawValues || typeof rawValues !== "object") {
+    return defaults;
+  }
+  return {
+    brightness: clampNumber(rawValues.brightness, 0.5, 1.5, defaults.brightness),
+    contrast: clampNumber(rawValues.contrast, 0.5, 1.5, defaults.contrast),
+    color: clampNumber(rawValues.color, 0.5, 1.5, defaults.color),
+    sharpness: clampNumber(rawValues.sharpness, 0.5, 1.8, defaults.sharpness),
+    soften: clampNumber(rawValues.soften, 0, 1, defaults.soften),
+  };
+}
+
+function sliderValuesMatchStyle(values, style) {
+  if (!style) return false;
+  return (
+    floatsEqual(values.brightness, style.brightness) &&
+    floatsEqual(values.contrast, style.contrast) &&
+    floatsEqual(values.color, style.color) &&
+    floatsEqual(values.sharpness, style.sharpness) &&
+    floatsEqual(values.soften, style.soften)
+  );
+}
+
+function downloadTextFile(filename, text, mimeType = "application/json") {
+  const blob = new Blob([text], { type: `${mimeType};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+async function exportPreset() {
+  const payload = {
+    app: "ai-headshot-studio",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    settings: collectCurrentSettings(),
+  };
+  const serialized = JSON.stringify(payload, null, 2);
+
+  try {
+    if (!navigator.clipboard?.writeText) {
+      throw new Error("clipboard-unavailable");
+    }
+    await navigator.clipboard.writeText(serialized);
+    showToast("Preset copied to clipboard.");
+  } catch {
+    const filename = `headshot-preset-${Date.now()}.json`;
+    downloadTextFile(filename, serialized);
+    showToast("Clipboard unavailable. Preset downloaded as JSON.");
+  }
+}
+
+function applyImportedPresetSettings(settings) {
+  if (!settings || typeof settings !== "object") {
+    throw new Error("Preset settings are missing.");
+  }
+
+  if (typeof settings.removeBg === "boolean") {
+    elements.removeBg.checked = settings.removeBg;
+  }
+
+  const backgrounds = new Set(["white", "light", "blue", "gray", "custom", "transparent"]);
+  if (typeof settings.background === "string" && backgrounds.has(settings.background)) {
+    elements.background.value = settings.background;
+  }
+  if (typeof settings.backgroundHex === "string") {
+    elements.backgroundHex.value = settings.backgroundHex;
+  }
+
+  if (typeof settings.preset === "string") {
+    const hasPreset = [...elements.preset.options].some((option) => option.value === settings.preset);
+    if (hasPreset) {
+      elements.preset.value = settings.preset;
+    }
+  }
+
+  elements.cropSliders.topBias.value = String(
+    clampNumber(settings.topBias, 0, 1, Number(elements.cropSliders.topBias.value)),
+  );
+
+  if (settings.format === "png" || settings.format === "jpeg") {
+    elements.format.value = settings.format;
+  }
+  elements.exportSliders.jpegQuality.value = String(
+    Math.round(
+      clampNumber(settings.jpegQuality, 60, 100, Number(elements.exportSliders.jpegQuality.value)),
+    ),
+  );
+  if (typeof settings.autoUpdate === "boolean") {
+    elements.autoUpdate.checked = settings.autoUpdate;
+  }
+
+  const styleKey =
+    typeof settings.style === "string" ? settings.style.toLowerCase().trim() : "manual";
+  const baseSliders =
+    styleKey && styleKey !== "manual" && state.styles[styleKey]
+      ? { ...state.styles[styleKey] }
+      : neutralSliders();
+  const importedSliders =
+    settings.sliders && typeof settings.sliders === "object"
+      ? normalizeSliderValues(settings.sliders)
+      : null;
+  const finalSliders = importedSliders
+    ? {
+        ...baseSliders,
+        ...importedSliders,
+      }
+    : baseSliders;
+  setSliders(finalSliders);
+
+  if (styleKey !== "manual" && sliderValuesMatchStyle(finalSliders, state.styles[styleKey])) {
+    setStyleSelection(styleKey);
+  } else {
+    setStyleSelection("manual");
+  }
+
+  const useCaseKey =
+    typeof settings.useCase === "string" && settings.useCase in USE_CASES ? settings.useCase : null;
+  setUseCaseSelection(useCaseKey);
+
+  enforceCompatibleOptions();
+  updateBackgroundCustomVisibility();
+  updateBackgroundSwatch();
+  updateSliderValues();
+  elements.exportSliders.jpegQuality.disabled = elements.format.value !== "jpeg";
+  queueProcess(true);
+  scheduleSaveSettings();
+}
+
+async function importPreset(file) {
+  if (!file) return;
+  if (file.size > 512 * 1024) {
+    throw new Error("Preset file is too large.");
+  }
+
+  const text = await file.text();
+  const parsed = safeParseJSON(text);
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("Invalid preset JSON.");
+  }
+
+  const settings =
+    parsed.settings && typeof parsed.settings === "object" ? parsed.settings : parsed;
+  applyImportedPresetSettings(settings);
 }
 
 function syncStyleIfSlidersChanged() {
@@ -507,7 +672,7 @@ function setFile(file) {
     elements.compareOriginal.style.clipPath = "inset(0 50% 0 0)";
   }
   if (state.processedUrl) {
-    URL.revokeObjectURL(state.processedUrl);
+    revokeObjectUrl(state.processedUrl);
     state.processedUrl = null;
   }
   elements.processedPreview.removeAttribute("src");
@@ -523,6 +688,20 @@ function setFile(file) {
   };
   reader.readAsDataURL(file);
   queueProcess(true);
+}
+
+function revokeObjectUrl(url) {
+  if (typeof url === "string" && url) {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function clearHistory() {
+  state.history.forEach((entry) => {
+    revokeObjectUrl(entry?.url);
+  });
+  state.history = [];
+  renderHistory();
 }
 
 function renderHistory() {
@@ -692,7 +871,7 @@ async function processImage() {
     }
 
     if (state.processedUrl) {
-      URL.revokeObjectURL(state.processedUrl);
+      revokeObjectUrl(state.processedUrl);
       state.processedUrl = null;
     }
     const blob = await response.blob();
@@ -718,7 +897,7 @@ async function processImage() {
       detailParts.push(sizeLabel);
     }
     const entry = {
-      url: state.processedUrl,
+      url: URL.createObjectURL(blob),
       filename: `headshot.${elements.format.value}`,
       name: `Export ${new Date().toLocaleTimeString()}`,
       detail: detailParts.join(" · "),
@@ -726,9 +905,7 @@ async function processImage() {
     state.history.unshift(entry);
     if (state.history.length > 3) {
       const removed = state.history.pop();
-      if (removed?.url) {
-        URL.revokeObjectURL(removed.url);
-      }
+      revokeObjectUrl(removed?.url);
     }
     renderHistory();
     elements.downloadBtn.onclick = () => {
@@ -861,6 +1038,23 @@ function bindEvents() {
     scheduleSaveSettings();
   });
   elements.processBtn.addEventListener("click", () => processImage());
+  elements.exportPresetBtn.addEventListener("click", () => {
+    exportPreset();
+  });
+  elements.importPresetBtn.addEventListener("click", () => {
+    elements.importPresetInput.click();
+  });
+  elements.importPresetInput.addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      await importPreset(file);
+      showToast("Preset imported.");
+    } catch (error) {
+      showToast(error.message || "Could not import preset.");
+    }
+  });
   elements.cancelBtn.addEventListener("click", () => {
     if (state.controller) {
       state.controller.abort();
@@ -881,6 +1075,12 @@ function bindEvents() {
       localStorage.removeItem(STORAGE_KEY);
     } catch {}
     state.saved = null;
+    clearHistory();
+    if (state.processedUrl) {
+      revokeObjectUrl(state.processedUrl);
+      state.processedUrl = null;
+      elements.processedPreview.removeAttribute("src");
+    }
     elements.removeBg.checked = false;
     elements.background.value = "white";
     elements.backgroundHex.value = "#ffffff";
@@ -990,6 +1190,14 @@ function bindEvents() {
         }
       }
     }
+  });
+
+  window.addEventListener("beforeunload", () => {
+    if (state.processedUrl) {
+      revokeObjectUrl(state.processedUrl);
+      state.processedUrl = null;
+    }
+    clearHistory();
   });
 }
 

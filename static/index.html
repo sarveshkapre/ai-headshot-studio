@@ -159,6 +159,11 @@
             <button id="downloadBtn" class="btn btn--ghost" disabled>Download</button>
             <button id="cancelBtn" class="btn btn--ghost" type="button" hidden>Cancel</button>
           </div>
+          <div class="action-row action-row--compact">
+            <button id="exportPresetBtn" class="btn btn--ghost btn--small" type="button">Export preset</button>
+            <button id="importPresetBtn" class="btn btn--ghost btn--small" type="button">Import preset</button>
+            <input id="importPresetInput" type="file" accept="application/json" hidden />
+          </div>
           <div id="toast" class="toast" role="alert" aria-live="assertive" hidden>
             <div id="toastMessage" class="toast__message"></div>
             <button id="toastDismiss" class="toast__dismiss" type="button" aria-label="Dismiss message">
