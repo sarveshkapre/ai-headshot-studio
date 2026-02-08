@@ -90,7 +90,9 @@ def hex_to_rgb(value: str) -> tuple[int, int, int]:
     return (int(raw[0:2], 16), int(raw[2:4], 16), int(raw[4:6], 16))
 
 
-def apply_background(image: Image.Image, background: str, background_hex: str | None) -> Image.Image:
+def apply_background(
+    image: Image.Image, background: str, background_hex: str | None
+) -> Image.Image:
     background_key = background.strip().lower()
     if background_key == "transparent":
         return to_rgba(image)

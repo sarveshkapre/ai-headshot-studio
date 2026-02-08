@@ -1,29 +1,38 @@
 .PHONY: setup dev test lint typecheck build check release
 
-VENV=.venv
-PY=$(VENV)/bin/python
-PIP=$(VENV)/bin/pip
+VENV ?= .venv
+BOOTSTRAP_PYTHON ?= python3
+VENV_PY := $(VENV)/bin/python
+VENV_PIP := $(VENV)/bin/pip
+
+ifeq ($(wildcard $(VENV_PY)),)
+PYTHON ?= python3
+PIP ?= $(PYTHON) -m pip
+else
+PYTHON := $(VENV_PY)
+PIP := $(VENV_PIP)
+endif
 
 setup:
-	python3 -m venv $(VENV)
-	$(PIP) install --upgrade pip
-	$(PIP) install -e ".[dev]"
+	$(BOOTSTRAP_PYTHON) -m venv $(VENV)
+	$(VENV_PIP) install --upgrade pip
+	$(VENV_PIP) install -e ".[dev]"
 
 dev:
-	$(VENV)/bin/uvicorn ai_headshot_studio.app:app --reload --port 8000
+	$(PYTHON) -m uvicorn ai_headshot_studio.app:app --reload --port 8000
 
 test:
-	$(VENV)/bin/pytest
+	$(PYTHON) -m pytest
 
 lint:
-	$(VENV)/bin/ruff check .
-	$(VENV)/bin/ruff format --check .
+	$(PYTHON) -m ruff check .
+	$(PYTHON) -m ruff format --check .
 
 typecheck:
-	$(VENV)/bin/mypy src/ai_headshot_studio
+	$(PYTHON) -m mypy src/ai_headshot_studio
 
 build:
-	$(PY) -m build
+	$(PYTHON) -m build
 
 check: lint typecheck test
 

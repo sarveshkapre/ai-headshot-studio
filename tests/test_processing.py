@@ -44,6 +44,7 @@ def test_process_passport_size() -> None:
     req = ProcessRequest(
         remove_bg=False,
         background="white",
+        background_hex=None,
         preset="passport-2x2",
         style=None,
         top_bias=0.2,
@@ -66,6 +67,7 @@ def test_process_is_case_insensitive_for_keys() -> None:
     req = ProcessRequest(
         remove_bg=False,
         background="WHITE",
+        background_hex=None,
         preset="PASSPORT-2X2",
         style="CLASSIC",
         top_bias=0.2,
@@ -86,10 +88,53 @@ def test_process_rejects_nan_values() -> None:
     req = ProcessRequest(
         remove_bg=False,
         background="white",
+        background_hex=None,
         preset="passport-2x2",
         style=None,
         top_bias=0.2,
         brightness=float("nan"),
+        contrast=1.0,
+        color=1.0,
+        sharpness=1.0,
+        soften=0.0,
+        jpeg_quality=92,
+        output_format="png",
+    )
+    with pytest.raises(ProcessingError):
+        process_image(data, req)
+
+
+def test_process_rejects_infinite_top_bias() -> None:
+    data = make_image(1200, 1600)
+    req = ProcessRequest(
+        remove_bg=False,
+        background="white",
+        background_hex=None,
+        preset="passport-2x2",
+        style=None,
+        top_bias=float("inf"),
+        brightness=1.0,
+        contrast=1.0,
+        color=1.0,
+        sharpness=1.0,
+        soften=0.0,
+        jpeg_quality=92,
+        output_format="png",
+    )
+    with pytest.raises(ProcessingError):
+        process_image(data, req)
+
+
+def test_process_rejects_invalid_custom_background_hex() -> None:
+    data = make_image(1200, 1600)
+    req = ProcessRequest(
+        remove_bg=False,
+        background="custom",
+        background_hex="#12",
+        preset="passport-2x2",
+        style=None,
+        top_bias=0.2,
+        brightness=1.0,
         contrast=1.0,
         color=1.0,
         sharpness=1.0,
@@ -139,3 +184,9 @@ def test_build_output_headers() -> None:
     assert headers["X-Output-Format"] == "png"
     assert headers["X-Processing-Ms"] == "42"
     assert headers["X-Output-Bytes"] == "1024"
+
+
+def test_to_bytes_rejects_unsupported_output_format() -> None:
+    image = Image.new("RGB", (32, 32), (0, 0, 0))
+    with pytest.raises(ProcessingError):
+        to_bytes(image, "webp")
