@@ -225,6 +225,8 @@
 - `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip`
 - `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`
 - `gh run watch 21843128641 --exit-status` (pass) — GitHub Actions `CodeQL` on `main` (WebP push)
+- `gh run watch 21843209545 --exit-status` (pass) — GitHub Actions `CI` on `main` (cycle 5 tracker/memory docs push)
+- `gh run watch 21843209553 --exit-status` (pass) — GitHub Actions `Secret Scan` on `main` (cycle 5 tracker/memory docs push)
 - `make check` (pass) — `19 passed`
 - `node --check static/app.js` (pass)
 - `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip`
