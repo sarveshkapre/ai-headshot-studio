@@ -44,7 +44,7 @@
 - Evidence:
   - CI annotation on run `21810971222`.
   - Code: `.github/workflows/codeql.yml`.
-- Commit: pending (this run).
+- Commit: `de5e0b419f5e173a59f62423dc0c8e5a37b7fe89`.
 - Confidence: High.
 - Trust label: `ci-verified`.
 - Follow-ups:
