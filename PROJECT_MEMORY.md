@@ -2,6 +2,50 @@
 
 ## Decisions
 
+### 2026-02-09 | Face-guided crop framing (optional OpenCV, safe fallback)
+- Decision: Add best-effort face-guided crop framing via an optional OpenCV Haar-cascade detector, and use it as a focus hint when alpha-mask foreground bounds are unavailable; expose availability via `/api/health` and surface it in the UI diagnostics panel.
+- Why: Crop presets are materially better when the subject’s face is used as the framing anchor, especially for non-transparent photos where alpha-mask guidance is absent.
+- Evidence:
+  - Code: `src/ai_headshot_studio/processing.py` (`face_subject_bbox`, `focus_bbox` integration in `process_image`).
+  - API: `src/ai_headshot_studio/app.py` (`face_framing_diagnostics` in `/api/health`).
+  - UI: `static/index.html`, `static/app.js` (diagnostics row).
+  - Packaging: `pyproject.toml` (optional `face` extra).
+  - Tests: `tests/test_processing.py` (focus bbox selection + propagation into crop call).
+- Validation:
+  - `make check` (pass) — `26 passed in 0.48s`
+- Commit: `dd1e2007a388b0e22a2e35e82d96a5b23a60a327`.
+- Confidence: Medium-high (detector is optional/best-effort; framing always falls back cleanly).
+- Trust label: `verified-local`.
+
+### 2026-02-09 | Batch CLI helper for folder workflows
+- Decision: Add a local batch CLI helper to apply studio settings to a folder of images, writing outputs to `outputs/` and optionally producing a ZIP plus `errors.json` when continuing on error.
+- Why: Batch is a baseline workflow; a CLI path reduces friction for non-UI and automation use cases while reusing the same server processing pipeline.
+- Evidence:
+  - Code: `scripts/batch_cli.py`.
+  - Tests: `tests/test_batch_cli.py`.
+  - Docs: `README.md`, `docs/PROJECT.md`.
+- Validation:
+  - `make check` (pass) — `28 passed in 0.68s`
+- Commit: `34deed4632e2db0f24235152ee2d0c5b930c64c7`.
+- Confidence: High.
+- Trust label: `verified-local`.
+
+### 2026-02-09 | WebP output support with feature detection
+- Decision: Support `format=webp` for `/api/process` and `/api/batch` (ZIP extension mapping), and add a WebP option in the UI; detect missing WebP encoder support and return a stable `webp_unavailable` error.
+- Why: WebP is a common export format for web workflows and can reduce output size while keeping acceptable quality.
+- Evidence:
+  - Code: `src/ai_headshot_studio/processing.py` (`normalize_output_format` + WebP encoder branch in `to_bytes`), `src/ai_headshot_studio/app.py` (content-type mapping, batch ext mapping).
+  - UI: `static/index.html`, `static/app.js` (WebP option + quality behavior).
+  - Docs: `README.md` (API format docs), `CHANGELOG.md`, `docs/ROADMAP.md` (face framing marked shipped).
+  - Tests: `tests/test_processing.py` (feature-detected WebP encoding), `tests/test_api.py` (WebP request accepts or reports `webp_unavailable`).
+- Validation:
+  - `make check` (pass) — `29 passed in 0.75s`
+  - `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip`
+  - `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`
+- Commit: `c5bedd48fd8cd9a42fd2571e6e5f41ab22cfab7d`.
+- Confidence: High.
+- Trust label: `verified-local`.
+
 ### 2026-02-09 | Batch robustness: continue-on-error reports + total size cap
 - Decision: Add `/api/batch` `continue_on_error=true` mode that returns a ZIP including an `errors.json` report (instead of failing the whole batch), add `X-Batch-Succeeded` / `X-Batch-Failed` headers, and enforce a total batch upload size cap (sum of bytes).
 - Why: Batch workflows shouldn’t require perfect inputs; one corrupt/invalid image should not discard other successful outputs. The total-size cap keeps server memory and runtime bounded for large selections.
@@ -175,6 +219,12 @@
 ## Verification Evidence
 
 ### 2026-02-09
+- `make check` (pass) — `26 passed in 0.48s` (after optional face framing changes)
+- `make check` (pass) — `28 passed in 0.68s` (after batch CLI changes)
+- `make check` (pass) — `29 passed in 0.75s` (after WebP output changes)
+- `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip`
+- `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`
+- `gh run watch 21843128641 --exit-status` (pass) — GitHub Actions `CodeQL` on `main` (WebP push)
 - `make check` (pass) — `19 passed`
 - `node --check static/app.js` (pass)
 - `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip`

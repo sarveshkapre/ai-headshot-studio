@@ -10,9 +10,9 @@
 
 ## Candidate Features To Do
 ### Selected (Cycle 5)
-- [ ] P1: Face-guided crop framing (optional dependency) so framing is strong even without alpha masks; expose availability via `/api/health` and keep a safe fallback.
-- [ ] P2: Add batch CLI helper (process a folder to `outputs/` + optional ZIP + `errors.json`) for non-UI workflows.
-- [ ] P3: Add WebP output option with feature detection (return a clear error when encoder is unavailable); update UI + API docs + tests.
+- [x] P1: Face-guided crop framing (optional dependency) so framing is strong even without alpha masks; expose availability via `/api/health` and keep a safe fallback.
+- [x] P2: Add batch CLI helper (process a folder to `outputs/` + optional ZIP + `errors.json`) for non-UI workflows.
+- [x] P3: Add WebP output option with feature detection (return a clear error when encoder is unavailable); update UI + API docs + tests.
 
 ### Selected (Cycle 4)
 - [x] P1: Fix `top_bias` semantics to match docs/UI (“Headroom”: higher value should yield more headroom) and update tests.
@@ -26,6 +26,12 @@
 - [ ] P3: Add “profile suggestions” (auto-name saved profiles based on use-case/preset/style) to reduce friction.
 
 ## Implemented
+- [2026-02-09] Face-guided crop framing (best-effort, optional OpenCV) with `/api/health` diagnostics and UI surfacing.
+  - Evidence: `src/ai_headshot_studio/processing.py` (`face_subject_bbox`, `focus_bbox`), `src/ai_headshot_studio/app.py` (`face_framing_diagnostics`), `static/index.html` + `static/app.js` (diagnostics row), `pyproject.toml` (optional `face` extra), `tests/test_processing.py` (focus propagation).
+- [2026-02-09] Batch CLI helper for processing folders to `outputs/` with optional ZIP and `errors.json` report.
+  - Evidence: `scripts/batch_cli.py`, `tests/test_batch_cli.py`, `README.md`, `docs/PROJECT.md`.
+- [2026-02-09] WebP output support across API + UI with feature detection (`webp_unavailable`) when encoder is unavailable.
+  - Evidence: `src/ai_headshot_studio/processing.py` (`to_bytes` WebP branch), `src/ai_headshot_studio/app.py` (content-type + ZIP ext mapping), `static/index.html` + `static/app.js` (format dropdown + quality enablement), `README.md` (API docs), `tests/test_processing.py` + `tests/test_api.py`.
 - [2026-02-09] Headroom control made intuitive in UI (RTL slider + display inversion) + docs corrected for `top_bias`.
   - Evidence: `static/index.html` (`topBias` range is RTL + visible value is headroom), `static/styles.css` (`.range--rtl`), `static/app.js` (headroom display inversion), `README.md` (`top_bias` semantics).
 - [2026-02-09] Subject-guided crop framing using alpha mask foreground bounds when available.
@@ -75,6 +81,12 @@
 - Parity: batch ZIP export, saved profiles + bundles, crop presets/headroom control, predictable export metadata.
 - Differentiator: local-first privacy posture (no accounts/no third-party uploads), offline-ready static UI after setup.
 
+## Gap Map (Cycle 5)
+- Missing: visual regression smoke script for `static/`, perf micro-benchmark guardrail, profile name suggestions in UI.
+- Weak: face framing still best-effort (optional dependency); should remain conservative and always fall back cleanly.
+- Parity: WebP output option, batch ZIP workflow, diagnostics surfaced in UI.
+- Differentiator: local-only processing + optional local dependencies (no remote calls).
+
 ## Insights
 - CI failures were caused by Make targets hardcoding `.venv/bin/*` while GitHub Actions installs dependencies into the runner Python environment.
 - History URLs must be independent from the active preview URL; otherwise revoking preview URLs breaks older history downloads.
@@ -84,6 +96,8 @@
 - GitHub Actions annotations can surface near-term maintenance debt before it becomes a failing check.
 - `top_bias` is easier to reason about as “crop shift” while the UI can show an inverted “Headroom” value (headroom = `1 - top_bias`).
 - Alpha-mask foreground bounds provide a lightweight “good enough” framing hint without requiring face-detection dependencies.
+- WebP output support depends on the Pillow build; a stable `webp_unavailable` error keeps behavior predictable when encoders are missing.
+- Optional face framing is best-effort and should never fail the processing pipeline when the dependency is missing or detection fails.
 - Market baseline: batch workflows commonly export a single ZIP and let users choose output format and folder name; “keep original background” is a common batch toggle.
 - Market baseline: common web tools cap image size (example: Canva Background Remover works under ~9MB and downscales to 10MP).
 - Market baseline sources (untrusted): PhotoRoom batch format options + naming (`https://help.photoroom.com/en/articles/12137322-edit-multiple-photos-with-the-batch-feature-web-app`), PhotoRoom “original background” template (`https://help.photoroom.com/en/articles/12818584-keep-the-original-background-when-using-the-batch-feature`), remove.bg upload limits (`https://www.remove.bg/it/help/a/what-is-the-maximum-image-resolution-file-size`), Canva background remover limits (`https://www.canva.com/learn/background-remover/`).
