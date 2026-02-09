@@ -15,9 +15,10 @@
 - [ ] P3: Add visual regression smoke script for `static/` workflow interactions (optional, fast, and deterministic).
 - [ ] P3: Add perf micro-benchmark for processing pipeline (guardrail against slow regressions).
 - [ ] P3: Add “profile suggestions” (auto-name saved profiles based on use-case/preset/style) to reduce friction.
-- [ ] P3: Add batch “continue on error” mode (returns a ZIP including `errors.json` instead of failing the entire batch).
 
 ## Implemented
+- [2026-02-09] Batch robustness improvements: continue-on-error ZIP reports + total batch size cap + UI surfaced limits and success/failure counts.
+  - Evidence: `src/ai_headshot_studio/app.py` (`continue_on_error`, `errors.json`, batch size cap + headers), `tests/test_api.py` (continue-on-error + cap coverage), `static/app.js` + `static/index.html` (limits hint, total bytes selection, succeeded/failed messaging), `README.md` (API doc).
 - [2026-02-09] Hardened upload validation + structured API error payloads (`code`, `message`).
   - Evidence: `src/ai_headshot_studio/processing.py` (format allowlist), `src/ai_headshot_studio/app.py` (structured `detail`), `tests/test_api.py` (invalid bytes + GIF rejection).
 - [2026-02-09] Preset bundle import validation + conflict handling (overwrite toggle + summary toast).

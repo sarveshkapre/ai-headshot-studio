@@ -2,6 +2,22 @@
 
 ## Decisions
 
+### 2026-02-09 | Batch robustness: continue-on-error reports + total size cap
+- Decision: Add `/api/batch` `continue_on_error=true` mode that returns a ZIP including an `errors.json` report (instead of failing the whole batch), add `X-Batch-Succeeded` / `X-Batch-Failed` headers, and enforce a total batch upload size cap (sum of bytes).
+- Why: Batch workflows shouldn’t require perfect inputs; one corrupt/invalid image should not discard other successful outputs. The total-size cap keeps server memory and runtime bounded for large selections.
+- Evidence:
+  - API: `src/ai_headshot_studio/app.py` (`continue_on_error`, `errors.json` report, total batch byte cap, new batch headers, `/api/health` limits).
+  - Tests: `tests/test_api.py` (continue-on-error ZIP + report assertions, total-size cap rejection).
+  - UI: `static/index.html`, `static/app.js` (batch limit hint from `/api/health`, client-side total-byte enforcement, succeeded/failed messaging).
+  - Docs: `README.md`, `CHANGELOG.md`.
+- Validation:
+  - `make check` (pass) — `21 passed in 0.42s`
+  - `make smoke` (pass) — output includes `batch smoke ok: 2x 600x600 jpeg in zip`
+  - `node --check static/app.js` (pass)
+- Commits: `f7dfd0616e59ff27df3051a4fc3fe6878bd37dfc`, `23c37ad5e76d1e24d6766aa19a3e6ce544f860a6`.
+- Confidence: High.
+- Trust label: `verified-local`.
+
 ### 2026-02-09 | Structured API errors + stricter server-side upload validation
 - Decision: Return structured API error payloads (`detail.code`, `detail.message`) and enforce server-side image validation via format sniffing + allowlist.
 - Why: Improves UX (client can surface consistent messages) and hardens the API against spoofed content-types and non-image uploads.
@@ -126,6 +142,8 @@
 - `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip`
 - `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`
 - `docker build -t ai-headshot-studio:local .` (fail) — `docker` not installed in this environment
+- `make check` (pass) — `21 passed in 0.42s` (rerun after batch robustness changes)
+- `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip` (rerun after batch robustness changes)
 
 ## Market Scan Notes (Untrusted)
 
