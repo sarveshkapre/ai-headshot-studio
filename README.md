@@ -36,7 +36,7 @@ docker run --rm -p 8000:8000 ai-headshot-studio
   - Response includes `X-Output-Width`, `X-Output-Height`, `X-Output-Format`, `X-Processing-Ms`, `X-Output-Bytes` headers
 - `POST /api/batch` — multipart form data (process multiple images with the same settings)
   - Returns a ZIP (`application/zip`) with processed outputs.
-  - Response includes `X-Batch-Count`, `X-Processing-Ms`, `X-Output-Format` headers
+  - Response includes `X-Batch-Count`, `X-Batch-Succeeded`, `X-Batch-Failed`, `X-Processing-Ms`, `X-Output-Format` headers
 
 ### `POST /api/process` fields
 - `image` (file, required)
@@ -58,6 +58,8 @@ docker run --rm -p 8000:8000 ai-headshot-studio
 - `images` (files, required; up to 24)
 - All `POST /api/process` fields except `image`
 - `folder` (optional; safe folder name inside the ZIP)
+- `continue_on_error` (`true|false`, default `false`)
+  - When `true`, the ZIP can include an `errors.json` report (and the endpoint will still return `200` for partial failures).
 
 ## Notes
 - Background removal runs locally and may download a model the first time it is used.

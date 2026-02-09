@@ -13,6 +13,8 @@
 - Preview metadata (original/output dimensions); API returns output headers including processing time.
 - Cancel button to abort in-flight processing requests; client-side file validation (type/size).
 - Batch processing endpoint + UI (multi-upload to a single ZIP download).
+- Batch “continue on error” mode for `/api/batch` (ZIP includes an `errors.json` report for per-item failures).
+- Batch total upload size cap (sum of bytes across uploaded images) to keep memory bounded.
 - Saved profiles library (named profiles) plus export/import preset bundles (JSON).
 - Headroom control (crop top-bias) for smarter framing.
 - Preview zoom toggle (fit vs actual size).

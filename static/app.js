@@ -27,6 +27,7 @@ const elements = {
   batchInput: document.getElementById("batchInput"),
   batchFolder: document.getElementById("batchFolder"),
   batchCount: document.getElementById("batchCount"),
+  batchLimits: document.getElementById("batchLimits"),
   batchStatus: document.getElementById("batchStatus"),
   batchList: document.getElementById("batchList"),
   batchProcessBtn: document.getElementById("batchProcessBtn"),
@@ -122,6 +123,14 @@ function setStatusLoading(isLoading) {
 }
 
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
+const DEFAULT_MAX_BATCH_IMAGES = 24;
+const DEFAULT_MAX_BATCH_TOTAL_BYTES = 72 * 1024 * 1024;
+
+state.limits = {
+  maxUploadBytes: MAX_UPLOAD_BYTES,
+  maxBatchImages: DEFAULT_MAX_BATCH_IMAGES,
+  maxBatchTotalBytes: DEFAULT_MAX_BATCH_TOTAL_BYTES,
+};
 
 const STORAGE_KEY = "ai-headshot-studio:settings:v1";
 const ZOOM_KEY = "ai-headshot-studio:preview-zoom:v1";
@@ -1131,8 +1140,10 @@ function setFile(file) {
     showToast("Could not read that file.");
     return;
   }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    showToast("File too large. Max 12MB.");
+  const uploadLimit = state.limits?.maxUploadBytes || MAX_UPLOAD_BYTES;
+  if (file.size > uploadLimit) {
+    const label = formatBytes(uploadLimit) || "12MB";
+    showToast(`File too large. Max ${label}.`);
     return;
   }
   if (!file.type || !file.type.startsWith("image/")) {
@@ -1238,6 +1249,14 @@ function formatBytes(bytes) {
   return `${value.toFixed(value < 10 ? 1 : 0)}${units[idx]}`;
 }
 
+function updateBatchLimitsHint() {
+  if (!elements.batchLimits) return;
+  const maxImages = state.limits?.maxBatchImages || DEFAULT_MAX_BATCH_IMAGES;
+  const maxTotal = state.limits?.maxBatchTotalBytes || DEFAULT_MAX_BATCH_TOTAL_BYTES;
+  const totalLabel = formatBytes(maxTotal) || `${Math.round(maxTotal / (1024 * 1024))}MB`;
+  elements.batchLimits.textContent = `Max ${maxImages} images, ${totalLabel} total.`;
+}
+
 function enforceCompatibleOptions() {
   if (elements.background.value === "transparent") {
     if (!elements.removeBg.checked) {
@@ -1300,6 +1319,20 @@ async function loadHealthDiagnostics() {
     const rembgAvailable = Boolean(rembg?.available);
     const version = typeof data?.version === "string" ? data.version : "unknown";
     const uploadMb = Number(data?.limits?.max_upload_mb);
+    const uploadBytes = Number(data?.limits?.max_upload_bytes);
+    const batchImages = Number(data?.limits?.max_batch_images);
+    const batchTotalBytes = Number(data?.limits?.max_batch_total_bytes);
+
+    if (Number.isFinite(uploadBytes) && uploadBytes > 0) {
+      state.limits.maxUploadBytes = uploadBytes;
+    }
+    if (Number.isFinite(batchImages) && batchImages > 0) {
+      state.limits.maxBatchImages = batchImages;
+    }
+    if (Number.isFinite(batchTotalBytes) && batchTotalBytes > 0) {
+      state.limits.maxBatchTotalBytes = batchTotalBytes;
+    }
+    updateBatchLimitsHint();
 
     setHealthBadge(apiOk ? "ok" : "error", apiOk ? "Healthy" : "Degraded");
     elements.diagApi.textContent = apiOk ? "OK" : "Unavailable";
@@ -1314,6 +1347,7 @@ async function loadHealthDiagnostics() {
     elements.diagUploadLimit.textContent = "--";
     elements.healthSummary.textContent =
       "Could not reach /api/health. Start the server and refresh this page.";
+    updateBatchLimitsHint();
   }
 }
 
@@ -1354,7 +1388,9 @@ function revokeBatchZipUrl() {
 
 function updateBatchSummary() {
   const count = state.batchFiles.length;
-  elements.batchCount.textContent = `${count} selected`;
+  const total = state.batchFiles.reduce((acc, file) => acc + (file?.size || 0), 0);
+  const totalLabel = formatBytes(total);
+  elements.batchCount.textContent = `${count} selected` + (totalLabel ? ` · ${totalLabel}` : "");
   elements.batchProcessBtn.disabled = count === 0;
   elements.batchDownloadBtn.disabled = !state.batchZipUrl;
 }
@@ -1397,27 +1433,47 @@ function setBatchFiles(fileList) {
   revokeBatchZipUrl();
   const next = [];
   let rejected = 0;
+  let rejectedTotal = 0;
+  let rejectedType = 0;
+  let rejectedSize = 0;
+  const uploadLimit = state.limits?.maxUploadBytes || MAX_UPLOAD_BYTES;
+  const batchLimit = state.limits?.maxBatchImages || DEFAULT_MAX_BATCH_IMAGES;
+  const batchTotalLimit = state.limits?.maxBatchTotalBytes || DEFAULT_MAX_BATCH_TOTAL_BYTES;
+  let total = 0;
   [...fileList].forEach((file) => {
     if (!file || typeof file.size !== "number") {
       rejected += 1;
       return;
     }
-    if (file.size > MAX_UPLOAD_BYTES) {
+    if (file.size > uploadLimit) {
       rejected += 1;
+      rejectedSize += 1;
       return;
     }
     if (!file.type || !file.type.startsWith("image/")) {
       rejected += 1;
+      rejectedType += 1;
       return;
     }
+    if (total + file.size > batchTotalLimit) {
+      rejected += 1;
+      rejectedTotal += 1;
+      return;
+    }
+    total += file.size;
     next.push(file);
   });
-  state.batchFiles = next.slice(0, 24);
+  state.batchFiles = next.slice(0, batchLimit);
   if (rejected > 0) {
-    showToast(`Skipped ${rejected} unsupported/too-large file(s).`);
+    const parts = [];
+    if (rejectedSize) parts.push(`${rejectedSize} too large`);
+    if (rejectedType) parts.push(`${rejectedType} not an image`);
+    if (rejectedTotal) parts.push(`${rejectedTotal} exceeds batch total`);
+    const suffix = parts.length ? ` (${parts.join(", ")})` : "";
+    showToast(`Skipped ${rejected} file(s)${suffix}.`);
   }
-  if (next.length > 24) {
-    showToast("Batch limited to 24 images.");
+  if (next.length > batchLimit) {
+    showToast(`Batch limited to ${batchLimit} images.`);
   }
   updateBatchSummary();
   renderBatchList();
@@ -1491,11 +1547,18 @@ async function processBatch() {
 
     const blob = await response.blob();
     const filename = parseZipFilename(response.headers.get("content-disposition"));
+    const succeeded = Number(response.headers.get("x-batch-succeeded"));
+    const failed = Number(response.headers.get("x-batch-failed"));
     revokeBatchZipUrl();
     state.batchZipUrl = URL.createObjectURL(blob);
     elements.batchDownloadBtn.disabled = false;
-    elements.batchStatus.textContent = "Batch ready. Download the ZIP.";
-    showToast("Batch processed.");
+    if (Number.isFinite(succeeded) && Number.isFinite(failed) && failed > 0) {
+      elements.batchStatus.textContent = `Batch ready (${succeeded} ok, ${failed} failed). Download the ZIP.`;
+      showToast("Batch processed with errors. Download ZIP for report.");
+    } else {
+      elements.batchStatus.textContent = "Batch ready. Download the ZIP.";
+      showToast("Batch processed.");
+    }
     if (filename) {
       elements.batchDownloadBtn.dataset.filename = filename;
     } else {
@@ -1980,6 +2043,7 @@ applySavedSettings();
 updateBackgroundCustomVisibility();
 updateBackgroundSwatch();
 setEstimateMeta("--");
+updateBatchLimitsHint();
 updateBatchSummary();
 renderBatchList();
 setBatchLoading(false);

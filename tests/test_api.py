@@ -30,6 +30,9 @@ def test_health_includes_diagnostics() -> None:
     assert data["limits"]["max_upload_mb"] == 12
     assert data["limits"]["max_upload_bytes"] == 12 * 1024 * 1024
     assert "max_pixels" in data["limits"]
+    assert data["limits"]["max_batch_images"] == 24
+    assert data["limits"]["max_batch_total_mb"] == 72
+    assert data["limits"]["max_batch_total_bytes"] == 72 * 1024 * 1024
     assert "background_removal" in data["features"]
     assert data["features"]["background_removal"]["mode"] == "local"
 
