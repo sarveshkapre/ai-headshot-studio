@@ -30,6 +30,32 @@
         </div>
 
         <div class="card">
+          <div class="card__title-row">
+            <div class="card__title">Batch processing</div>
+            <small id="batchCount" class="hint">0 selected</small>
+          </div>
+          <input id="batchInput" type="file" accept="image/*" multiple />
+          <div class="select-row">
+            <label for="batchFolder">ZIP folder</label>
+            <input
+              id="batchFolder"
+              type="text"
+              inputmode="text"
+              autocomplete="off"
+              placeholder="headshots"
+              aria-label="Folder name inside the ZIP"
+            />
+          </div>
+          <div id="batchStatus" class="hint">Applies the current studio settings to every selected image.</div>
+          <div id="batchList" class="batch-list" aria-live="polite"></div>
+          <div class="action-row">
+            <button id="batchProcessBtn" class="btn" type="button" disabled>Process batch</button>
+            <button id="batchDownloadBtn" class="btn btn--ghost" type="button" disabled>Download ZIP</button>
+            <button id="batchCancelBtn" class="btn btn--ghost" type="button" hidden>Cancel</button>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card__title">Use cases</div>
           <div class="use-case-grid" id="useCaseGrid">
             <button class="use-case-card" data-use-case="linkedin" type="button">
@@ -173,6 +199,27 @@
             </button>
           </div>
           <small class="hint">Shortcut: Ctrl / ⌘ + Enter to process</small>
+        </div>
+
+        <div class="card">
+          <div class="card__title-row">
+            <div class="card__title">Profiles</div>
+            <div class="button-group">
+              <button id="exportBundleBtn" class="btn btn--ghost btn--small" type="button">
+                Export bundle
+              </button>
+              <button id="importBundleBtn" class="btn btn--ghost btn--small" type="button">
+                Import bundle
+              </button>
+              <input id="importBundleInput" type="file" accept="application/json" hidden />
+            </div>
+          </div>
+          <div class="profile-row">
+            <input id="profileName" type="text" placeholder="Profile name" aria-label="Profile name" />
+            <button id="saveProfileBtn" class="btn btn--ghost btn--small" type="button">Save profile</button>
+          </div>
+          <div id="profilesList" class="profiles-list" aria-live="polite"></div>
+          <small class="hint">Profiles are stored locally in this browser.</small>
         </div>
       </section>
 

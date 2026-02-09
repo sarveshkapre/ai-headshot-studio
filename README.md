@@ -34,6 +34,9 @@ docker run --rm -p 8000:8000 ai-headshot-studio
 - `GET /api/presets` — list crop presets and styles
 - `POST /api/process` — multipart form data
   - Response includes `X-Output-Width`, `X-Output-Height`, `X-Output-Format`, `X-Processing-Ms`, `X-Output-Bytes` headers
+- `POST /api/batch` — multipart form data (process multiple images with the same settings)
+  - Returns a ZIP (`application/zip`) with processed outputs.
+  - Response includes `X-Batch-Count`, `X-Processing-Ms`, `X-Output-Format` headers
 
 ### `POST /api/process` fields
 - `image` (file, required)
@@ -50,6 +53,11 @@ docker run --rm -p 8000:8000 ai-headshot-studio
 - `soften` (0–1)
 - `jpeg_quality` (60–100, default 92; applies to JPEG output only)
 - `format` (`png|jpeg`)
+
+### `POST /api/batch` fields
+- `images` (files, required; up to 24)
+- All `POST /api/process` fields except `image`
+- `folder` (optional; safe folder name inside the ZIP)
 
 ## Notes
 - Background removal runs locally and may download a model the first time it is used.

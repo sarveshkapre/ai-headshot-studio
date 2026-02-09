@@ -65,3 +65,42 @@ if image.size != (600, 600):
     raise SystemExit(f"Unexpected output size: {image.size}")
 print("smoke ok: 600x600 jpeg")
 PY
+
+"${PYTHON_BIN}" - <<'PY' "${TMP_DIR}/input2.png"
+import sys
+from PIL import Image
+
+output = sys.argv[1]
+Image.new("RGB", (1000, 1400), (120, 160, 180)).save(output, format="PNG")
+PY
+
+curl -fsS \
+  -D "${TMP_DIR}/batch_headers.txt" \
+  -o "${TMP_DIR}/batch.zip" \
+  -F "images=@${TMP_DIR}/input.png" \
+  -F "images=@${TMP_DIR}/input2.png" \
+  -F "remove_bg=false" \
+  -F "background=white" \
+  -F "preset=passport-2x2" \
+  -F "format=jpeg" \
+  -F "folder=smoke" \
+  "http://127.0.0.1:${PORT}/api/batch"
+
+grep -qi '^content-type: application/zip' "${TMP_DIR}/batch_headers.txt"
+grep -qi '^x-batch-count: 2' "${TMP_DIR}/batch_headers.txt"
+
+"${PYTHON_BIN}" - <<'PY' "${TMP_DIR}/batch.zip"
+import io
+import sys
+import zipfile
+from PIL import Image
+
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    names = archive.namelist()
+    if len(names) != 2:
+        raise SystemExit(f"Unexpected ZIP contents: {names}")
+    sample = Image.open(io.BytesIO(archive.read(names[0])))
+    if sample.size != (600, 600):
+        raise SystemExit(f"Unexpected batch image size: {sample.size}")
+print("batch smoke ok: 2x 600x600 jpeg in zip")
+PY

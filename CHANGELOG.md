@@ -9,6 +9,8 @@
 - Local settings persistence (saved to `localStorage`) and a “Reset studio” control.
 - Preview metadata (original/output dimensions); API returns output headers including processing time.
 - Cancel button to abort in-flight processing requests; client-side file validation (type/size).
+- Batch processing endpoint + UI (multi-upload to a single ZIP download).
+- Saved profiles library (named profiles) plus export/import preset bundles (JSON).
 - Headroom control (crop top-bias) for smarter framing.
 - Preview zoom toggle (fit vs actual size).
 - Background swatch preview next to backdrop selector.

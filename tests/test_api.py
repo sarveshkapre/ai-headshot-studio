@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import zipfile
 
 from fastapi.testclient import TestClient
 from PIL import Image
@@ -94,3 +95,36 @@ def test_process_rejects_unsupported_format() -> None:
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Unsupported output format."
+
+
+def test_batch_returns_zip_with_processed_images() -> None:
+    payload1 = make_image()
+    payload2 = make_image(width=900, height=1200)
+    response = client.post(
+        "/api/batch",
+        files=[
+            ("images", ("a.png", payload1, "image/png")),
+            ("images", ("b.png", payload2, "image/png")),
+        ],
+        data={
+            "remove_bg": "false",
+            "background": "white",
+            "preset": "passport-2x2",
+            "format": "jpeg",
+            "folder": "My Batch",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/zip")
+    assert response.headers["x-batch-count"] == "2"
+    assert response.headers["x-output-format"] == "jpeg"
+
+    buffer = io.BytesIO(response.content)
+    with zipfile.ZipFile(buffer) as archive:
+        names = archive.namelist()
+        assert len(names) == 2
+        assert all(name.startswith("My-Batch/") for name in names)
+        assert all(name.endswith(".jpg") for name in names)
+
+        sample = Image.open(io.BytesIO(archive.read(names[0])))
+        assert sample.size == (600, 600)

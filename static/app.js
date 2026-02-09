@@ -4,8 +4,10 @@ const state = {
   style: "classic",
   styles: {},
   controller: null,
+  batchController: null,
   debounce: null,
   processedUrl: null,
+  batchZipUrl: null,
   toastTimer: null,
   saveTimer: null,
   estimateTimer: null,
@@ -15,11 +17,21 @@ const state = {
   useCase: null,
   isApplyingUseCase: false,
   presets: {},
+  batchFiles: [],
+  profiles: [],
 };
 
 const elements = {
   fileInput: document.getElementById("fileInput"),
   dropzone: document.getElementById("dropzone"),
+  batchInput: document.getElementById("batchInput"),
+  batchFolder: document.getElementById("batchFolder"),
+  batchCount: document.getElementById("batchCount"),
+  batchStatus: document.getElementById("batchStatus"),
+  batchList: document.getElementById("batchList"),
+  batchProcessBtn: document.getElementById("batchProcessBtn"),
+  batchDownloadBtn: document.getElementById("batchDownloadBtn"),
+  batchCancelBtn: document.getElementById("batchCancelBtn"),
   useCaseGrid: document.getElementById("useCaseGrid"),
   removeBg: document.getElementById("removeBg"),
   background: document.getElementById("background"),
@@ -36,6 +48,12 @@ const elements = {
   exportPresetBtn: document.getElementById("exportPresetBtn"),
   importPresetBtn: document.getElementById("importPresetBtn"),
   importPresetInput: document.getElementById("importPresetInput"),
+  exportBundleBtn: document.getElementById("exportBundleBtn"),
+  importBundleBtn: document.getElementById("importBundleBtn"),
+  importBundleInput: document.getElementById("importBundleInput"),
+  profileName: document.getElementById("profileName"),
+  saveProfileBtn: document.getElementById("saveProfileBtn"),
+  profilesList: document.getElementById("profilesList"),
   resetSliders: document.getElementById("resetSliders"),
   resetStudio: document.getElementById("resetStudio"),
   originalPreview: document.getElementById("originalPreview"),
@@ -107,6 +125,7 @@ const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const STORAGE_KEY = "ai-headshot-studio:settings:v1";
 const ZOOM_KEY = "ai-headshot-studio:preview-zoom:v1";
 const GUIDE_KEY = "ai-headshot-studio:framing-guide:v1";
+const PROFILES_KEY = "ai-headshot-studio:profiles:v1";
 
 const USE_CASES = {
   linkedin: {
@@ -215,6 +234,113 @@ function writeSettings(settings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   } catch {}
+}
+
+function readProfiles() {
+  try {
+    const raw = localStorage.getItem(PROFILES_KEY);
+    if (!raw) return [];
+    const parsed = safeParseJSON(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => item && typeof item === "object" && typeof item.name === "string");
+  } catch {
+    return [];
+  }
+}
+
+function writeProfiles(profiles) {
+  try {
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+  } catch {}
+}
+
+function normalizeProfileName(value) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  const cleaned = raw.replace(/\s+/g, " ").slice(0, 48);
+  return cleaned;
+}
+
+function suggestProfileName() {
+  if (state.useCase && USE_CASES[state.useCase]) {
+    return state.useCase[0].toUpperCase() + state.useCase.slice(1);
+  }
+  const preset = state.presets[elements.preset.value];
+  const presetName = typeof preset?.name === "string" ? preset.name : "";
+  const fmt = elements.format.value === "jpeg" ? "JPEG" : "PNG";
+  if (presetName) return `${presetName} · ${fmt}`;
+  return `Profile ${state.profiles.length + 1}`;
+}
+
+function uniqueProfileName(name) {
+  const base = normalizeProfileName(name) || "Profile";
+  const existing = new Set(state.profiles.map((profile) => profile.name));
+  if (!existing.has(base)) return base;
+  for (let i = 2; i <= 50; i += 1) {
+    const candidate = `${base} (${i})`;
+    if (!existing.has(candidate)) return candidate;
+  }
+  return `${base} (${Date.now()})`;
+}
+
+function renderProfiles() {
+  elements.profilesList.innerHTML = "";
+  if (!state.profiles.length) {
+    const empty = document.createElement("div");
+    empty.className = "history-empty";
+    empty.textContent = "No saved profiles yet.";
+    elements.profilesList.appendChild(empty);
+    return;
+  }
+
+  state.profiles.forEach((profile) => {
+    const row = document.createElement("div");
+    row.className = "profile-item";
+
+    const meta = document.createElement("div");
+    meta.className = "profile-meta";
+    const title = document.createElement("div");
+    title.className = "profile-title";
+    title.textContent = profile.name;
+    const sub = document.createElement("div");
+    sub.className = "profile-sub";
+    sub.textContent = "Applies saved studio settings.";
+    meta.appendChild(title);
+    meta.appendChild(sub);
+
+    const actions = document.createElement("div");
+    actions.className = "profile-actions";
+
+    const applyBtn = document.createElement("button");
+    applyBtn.className = "btn btn--ghost btn--small";
+    applyBtn.type = "button";
+    applyBtn.textContent = "Apply";
+    applyBtn.addEventListener("click", () => {
+      try {
+        applyImportedPresetSettings(profile.settings);
+        showToast(`Applied profile: ${profile.name}`);
+      } catch (error) {
+        showToast(error.message || "Could not apply profile.");
+      }
+    });
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "btn btn--ghost btn--small";
+    deleteBtn.type = "button";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", () => {
+      state.profiles = state.profiles.filter((item) => item.id !== profile.id);
+      writeProfiles(state.profiles);
+      renderProfiles();
+      showToast("Profile deleted.");
+    });
+
+    actions.appendChild(applyBtn);
+    actions.appendChild(deleteBtn);
+
+    row.appendChild(meta);
+    row.appendChild(actions);
+    elements.profilesList.appendChild(row);
+  });
 }
 
 function collectCurrentSettings() {
@@ -589,6 +715,84 @@ async function exportPreset() {
   }
 }
 
+async function exportBundle() {
+  if (!state.profiles.length) {
+    showToast("No saved profiles to export yet.");
+    return;
+  }
+  const payload = {
+    app: "ai-headshot-studio",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    profiles: state.profiles.map((profile) => ({
+      name: profile.name,
+      settings: profile.settings,
+    })),
+  };
+  const serialized = JSON.stringify(payload, null, 2);
+
+  try {
+    if (!navigator.clipboard?.writeText) {
+      throw new Error("clipboard-unavailable");
+    }
+    await navigator.clipboard.writeText(serialized);
+    showToast("Bundle copied to clipboard.");
+  } catch {
+    const filename = `headshot-bundle-${Date.now()}.json`;
+    downloadTextFile(filename, serialized);
+    showToast("Clipboard unavailable. Bundle downloaded as JSON.");
+  }
+}
+
+function importBundleData(parsed) {
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("Invalid bundle JSON.");
+  }
+  const profiles = parsed.profiles;
+  if (!Array.isArray(profiles) || profiles.length === 0) {
+    throw new Error("Bundle has no profiles.");
+  }
+  if (profiles.length > 50) {
+    throw new Error("Bundle has too many profiles.");
+  }
+
+  profiles.forEach((entry) => {
+    if (!entry || typeof entry !== "object") {
+      throw new Error("Bundle profile is invalid.");
+    }
+    const name = uniqueProfileName(entry.name);
+    const settings =
+      entry.settings && typeof entry.settings === "object" ? entry.settings : null;
+    if (!settings) {
+      throw new Error("Bundle profile settings are missing.");
+    }
+    state.profiles.unshift({
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      name,
+      settings,
+      createdAt: new Date().toISOString(),
+    });
+  });
+
+  state.profiles = state.profiles.slice(0, 30);
+  writeProfiles(state.profiles);
+  renderProfiles();
+}
+
+async function importBundle(file) {
+  if (!file) return;
+  if (file.size > 1024 * 1024) {
+    throw new Error("Bundle file is too large.");
+  }
+
+  const text = await file.text();
+  const parsed = safeParseJSON(text);
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("Invalid bundle JSON.");
+  }
+  importBundleData(parsed);
+}
+
 function applyImportedPresetSettings(settings) {
   if (!settings || typeof settings !== "object") {
     throw new Error("Preset settings are missing.");
@@ -676,6 +880,11 @@ async function importPreset(file) {
   const parsed = safeParseJSON(text);
   if (!parsed || typeof parsed !== "object") {
     throw new Error("Invalid preset JSON.");
+  }
+
+  if (Array.isArray(parsed.profiles)) {
+    importBundleData(parsed);
+    return;
   }
 
   const settings =
@@ -1021,6 +1230,189 @@ function formDataFromState() {
   return data;
 }
 
+function setBatchLoading(isLoading) {
+  elements.batchCancelBtn.hidden = !isLoading;
+  elements.batchProcessBtn.disabled = isLoading || state.batchFiles.length === 0;
+  elements.batchDownloadBtn.disabled = isLoading || !state.batchZipUrl;
+  elements.batchInput.disabled = isLoading;
+  elements.batchFolder.disabled = isLoading;
+}
+
+function revokeBatchZipUrl() {
+  if (state.batchZipUrl) {
+    revokeObjectUrl(state.batchZipUrl);
+    state.batchZipUrl = null;
+  }
+}
+
+function updateBatchSummary() {
+  const count = state.batchFiles.length;
+  elements.batchCount.textContent = `${count} selected`;
+  elements.batchProcessBtn.disabled = count === 0;
+  elements.batchDownloadBtn.disabled = !state.batchZipUrl;
+}
+
+function renderBatchList() {
+  elements.batchList.innerHTML = "";
+  if (!state.batchFiles.length) {
+    const empty = document.createElement("div");
+    empty.className = "history-empty";
+    empty.textContent = "Select images to process as a ZIP.";
+    elements.batchList.appendChild(empty);
+    return;
+  }
+  const maxRows = 8;
+  state.batchFiles.slice(0, maxRows).forEach((file) => {
+    const row = document.createElement("div");
+    row.className = "batch-item";
+    const meta = document.createElement("div");
+    meta.className = "batch-meta";
+    const title = document.createElement("div");
+    title.className = "batch-title";
+    title.textContent = file.name || "image";
+    const sub = document.createElement("div");
+    sub.className = "batch-sub";
+    sub.textContent = file.size ? formatBytes(file.size) : "";
+    meta.appendChild(title);
+    meta.appendChild(sub);
+    row.appendChild(meta);
+    elements.batchList.appendChild(row);
+  });
+  if (state.batchFiles.length > maxRows) {
+    const more = document.createElement("div");
+    more.className = "history-empty";
+    more.textContent = `+${state.batchFiles.length - maxRows} more`;
+    elements.batchList.appendChild(more);
+  }
+}
+
+function setBatchFiles(fileList) {
+  revokeBatchZipUrl();
+  const next = [];
+  let rejected = 0;
+  [...fileList].forEach((file) => {
+    if (!file || typeof file.size !== "number") {
+      rejected += 1;
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      rejected += 1;
+      return;
+    }
+    if (!file.type || !file.type.startsWith("image/")) {
+      rejected += 1;
+      return;
+    }
+    next.push(file);
+  });
+  state.batchFiles = next.slice(0, 24);
+  if (rejected > 0) {
+    showToast(`Skipped ${rejected} unsupported/too-large file(s).`);
+  }
+  if (next.length > 24) {
+    showToast("Batch limited to 24 images.");
+  }
+  updateBatchSummary();
+  renderBatchList();
+}
+
+function formDataForBatch() {
+  const data = new FormData();
+  state.batchFiles.forEach((file) => {
+    data.append("images", file);
+  });
+  data.append("remove_bg", elements.removeBg.checked ? "true" : "false");
+  data.append("background", elements.background.value);
+  if (elements.background.value === "custom") {
+    data.append("background_hex", elements.backgroundHex.value || "#ffffff");
+  }
+  data.append("preset", elements.preset.value);
+  data.append("top_bias", elements.cropSliders.topBias.value);
+  data.append("jpeg_quality", elements.exportSliders.jpegQuality.value);
+  data.append("brightness", elements.sliders.brightness.value);
+  data.append("contrast", elements.sliders.contrast.value);
+  data.append("color", elements.sliders.color.value);
+  data.append("sharpness", elements.sliders.sharpness.value);
+  data.append("soften", elements.sliders.soften.value);
+  data.append("format", elements.format.value);
+  const folder = elements.batchFolder.value?.trim();
+  if (folder) {
+    data.append("folder", folder);
+  }
+  return data;
+}
+
+function parseZipFilename(contentDisposition) {
+  if (typeof contentDisposition !== "string") return "";
+  const match = contentDisposition.match(/filename=\"([^\"]+)\"/i);
+  return match ? match[1] : "";
+}
+
+function downloadBatchZip() {
+  if (!state.batchZipUrl) return;
+  const link = document.createElement("a");
+  link.href = state.batchZipUrl;
+  link.download = elements.batchDownloadBtn.dataset.filename || "headshots-batch.zip";
+  link.click();
+}
+
+async function processBatch() {
+  if (!state.batchFiles.length) {
+    showToast("Select images for batch processing first.");
+    elements.batchInput.focus();
+    return;
+  }
+
+  if (state.batchController) {
+    state.batchController.abort();
+  }
+  state.batchController = new AbortController();
+  setBatchLoading(true);
+  elements.batchStatus.textContent = `Processing ${state.batchFiles.length} image(s)...`;
+
+  try {
+    const response = await fetch("/api/batch", {
+      method: "POST",
+      body: formDataForBatch(),
+      signal: state.batchController.signal,
+    });
+
+    if (!response.ok) {
+      let message = "Batch processing failed.";
+      try {
+        const detail = await response.json();
+        message = detail.detail || message;
+      } catch {}
+      throw new Error(message);
+    }
+
+    const blob = await response.blob();
+    const filename = parseZipFilename(response.headers.get("content-disposition"));
+    revokeBatchZipUrl();
+    state.batchZipUrl = URL.createObjectURL(blob);
+    elements.batchDownloadBtn.disabled = false;
+    elements.batchStatus.textContent = "Batch ready. Download the ZIP.";
+    showToast("Batch processed.");
+    if (filename) {
+      elements.batchDownloadBtn.dataset.filename = filename;
+    } else {
+      delete elements.batchDownloadBtn.dataset.filename;
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      elements.batchStatus.textContent = "Batch canceled.";
+      showToast("Batch canceled.");
+    } else {
+      elements.batchStatus.textContent = "Batch failed.";
+      showToast(error.message || "Batch failed.");
+    }
+  } finally {
+    state.batchController = null;
+    setBatchLoading(false);
+    updateBatchSummary();
+  }
+}
+
 async function processImage() {
   if (!state.file) {
     showToast("Choose a photo first.");
@@ -1130,6 +1522,25 @@ function bindEvents() {
     const file = event.target.files[0];
     if (file) {
       setFile(file);
+    }
+  });
+
+  elements.batchInput.addEventListener("change", (event) => {
+    const files = event.target.files;
+    if (!files) return;
+    setBatchFiles(files);
+  });
+  elements.batchProcessBtn.addEventListener("click", () => {
+    processBatch();
+  });
+  elements.batchDownloadBtn.addEventListener("click", () => {
+    downloadBatchZip();
+  });
+  elements.batchCancelBtn.addEventListener("click", () => {
+    if (state.batchController) {
+      state.batchController.abort();
+      state.batchController = null;
+      setBatchLoading(false);
     }
   });
 
@@ -1251,11 +1662,56 @@ function bindEvents() {
     if (!file) return;
     try {
       await importPreset(file);
-      showToast("Preset imported.");
+      showToast("Imported.");
     } catch (error) {
       showToast(error.message || "Could not import preset.");
     }
   });
+
+  elements.exportBundleBtn.addEventListener("click", () => {
+    exportBundle();
+  });
+  elements.importBundleBtn.addEventListener("click", () => {
+    elements.importBundleInput.click();
+  });
+  elements.importBundleInput.addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      await importBundle(file);
+      showToast("Bundle imported.");
+    } catch (error) {
+      showToast(error.message || "Could not import bundle.");
+    }
+  });
+
+  function saveProfile() {
+    const name = uniqueProfileName(elements.profileName.value || suggestProfileName());
+    const settings = collectCurrentSettings();
+    state.profiles.unshift({
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      name,
+      settings,
+      createdAt: new Date().toISOString(),
+    });
+    state.profiles = state.profiles.slice(0, 30);
+    writeProfiles(state.profiles);
+    renderProfiles();
+    elements.profileName.value = "";
+    showToast(`Saved profile: ${name}`);
+  }
+
+  elements.saveProfileBtn.addEventListener("click", () => {
+    saveProfile();
+  });
+  elements.profileName.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveProfile();
+    }
+  });
+
   elements.cancelBtn.addEventListener("click", () => {
     if (state.controller) {
       state.controller.abort();
@@ -1367,6 +1823,11 @@ function bindEvents() {
         state.controller = null;
         setStatusLoading(false);
         showToast("Canceled.");
+      } else if (state.batchController) {
+        state.batchController.abort();
+        state.batchController = null;
+        setBatchLoading(false);
+        showToast("Batch canceled.");
       } else {
         hideToast();
         elements.modalOverlay.hidden = true;
@@ -1407,16 +1868,22 @@ function bindEvents() {
       revokeObjectUrl(state.processedUrl);
       state.processedUrl = null;
     }
+    revokeBatchZipUrl();
     clearHistory();
   });
 }
 
 updateSliderValues();
 state.saved = readSettings();
+state.profiles = readProfiles();
+renderProfiles();
 applySavedSettings();
 updateBackgroundCustomVisibility();
 updateBackgroundSwatch();
 setEstimateMeta("--");
+updateBatchSummary();
+renderBatchList();
+setBatchLoading(false);
 elements.exportSliders.jpegQuality.disabled = elements.format.value !== "jpeg";
 setZoomMode(readZoomMode());
 setGuideMode(readGuideMode());
