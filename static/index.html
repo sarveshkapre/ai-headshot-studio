@@ -214,6 +214,16 @@
               <input id="importBundleInput" type="file" accept="application/json" hidden />
             </div>
           </div>
+          <div class="toggle-row">
+            <label class="switch">
+              <input id="bundleOverwrite" type="checkbox" />
+              <span class="slider"></span>
+            </label>
+            <div>
+              <div class="toggle-label">Overwrite conflicts on import</div>
+              <small>When off, conflicting names are renamed.</small>
+            </div>
+          </div>
           <div class="profile-row">
             <input id="profileName" type="text" placeholder="Profile name" aria-label="Profile name" />
             <button id="saveProfileBtn" class="btn btn--ghost btn--small" type="button">Save profile</button>

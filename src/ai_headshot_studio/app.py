@@ -39,6 +39,12 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 _SAFE_NAME_RE = re.compile(r"[^a-zA-Z0-9._-]+")
 
 
+def api_detail(code: str, message: str, **extra: object) -> dict[str, object]:
+    payload: dict[str, object] = {"code": code, "message": message}
+    payload.update(extra)
+    return payload
+
+
 def _safe_basename(filename: str | None) -> str:
     raw = (filename or "").strip()
     if not raw:
@@ -87,6 +93,14 @@ def build_output_headers(
 
 
 async def read_upload_limited(upload: UploadFile, max_bytes: int) -> bytes:
+    content_type = (upload.content_type or "").strip().lower()
+    if content_type and not content_type.startswith("image/"):
+        message = "Unsupported file type. Please choose an image."
+        raise HTTPException(
+            status_code=415,
+            detail=api_detail("unsupported_media_type", message),
+        )
+
     buffer = bytearray()
     while True:
         chunk = await upload.read(1024 * 1024)
@@ -94,7 +108,10 @@ async def read_upload_limited(upload: UploadFile, max_bytes: int) -> bytes:
             return bytes(buffer)
         buffer.extend(chunk)
         if len(buffer) > max_bytes:
-            raise HTTPException(status_code=413, detail=f"File too large. Max {MAX_UPLOAD_MB}MB.")
+            raise HTTPException(
+                status_code=413,
+                detail=api_detail("file_too_large", f"File too large. Max {MAX_UPLOAD_MB}MB."),
+            )
 
 
 @app.get("/")
@@ -189,7 +206,10 @@ async def process(
         result = process_image(data, req)
         payload = to_bytes(result, output_format, req.jpeg_quality)
     except ProcessingError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400,
+            detail=api_detail(exc.code, str(exc)),
+        ) from exc
 
     media_type = "image/png" if output_format == "png" else "image/jpeg"
     elapsed_ms = int((time.perf_counter() - start) * 1000)
@@ -219,9 +239,15 @@ async def batch(
     folder: str | None = Form(None),
 ) -> StreamingResponse:
     if len(images) == 0:
-        raise HTTPException(status_code=400, detail="No images provided.")
+        raise HTTPException(
+            status_code=400,
+            detail=api_detail("missing_images", "No images provided."),
+        )
     if len(images) > 24:
-        raise HTTPException(status_code=400, detail="Too many images. Max 24.")
+        raise HTTPException(
+            status_code=400,
+            detail=api_detail("too_many_images", "Too many images. Max 24."),
+        )
 
     output_format = format.strip().lower()
     zip_folder = _safe_zip_folder(folder)
@@ -251,9 +277,16 @@ async def batch(
                     result = process_image(data, req)
                     payload = to_bytes(result, output_format, req.jpeg_quality)
                 except ProcessingError as exc:
+                    filename = _safe_basename(upload.filename)
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Failed on {_safe_basename(upload.filename)}: {exc}",
+                        detail=api_detail(
+                            "batch_item_failed",
+                            f"Failed on {filename}: {exc}",
+                            filename=filename,
+                            index=idx,
+                            item_code=exc.code,
+                        ),
                     ) from exc
 
                 ext = "png" if output_format == "png" else "jpg"
@@ -269,7 +302,10 @@ async def batch(
         raise
     except Exception as exc:
         spool.close()
-        raise HTTPException(status_code=500, detail="Batch processing failed.") from exc
+        raise HTTPException(
+            status_code=500,
+            detail=api_detail("internal_error", "Batch processing failed."),
+        ) from exc
 
     elapsed_ms = int((time.perf_counter() - started) * 1000)
     timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")

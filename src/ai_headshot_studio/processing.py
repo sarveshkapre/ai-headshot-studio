@@ -15,7 +15,9 @@ MAX_PIXELS = 20_000_000
 
 
 class ProcessingError(ValueError):
-    pass
+    def __init__(self, message: str, code: str = "processing_error") -> None:
+        super().__init__(message)
+        self.code = code
 
 
 @dataclass(frozen=True)
@@ -37,18 +39,28 @@ class ProcessRequest:
 
 def validate_bytes(data: bytes) -> None:
     if len(data) > MAX_UPLOAD_BYTES:
-        raise ProcessingError(f"File too large. Max {MAX_UPLOAD_MB}MB.")
+        raise ProcessingError(f"File too large. Max {MAX_UPLOAD_MB}MB.", code="file_too_large")
 
 
 def load_image(data: bytes) -> Image.Image:
     try:
         image = Image.open(io.BytesIO(data))
+    except Exception as exc:  # pragma: no cover - PIL internal
+        raise ProcessingError("Unsupported or corrupted image.", code="invalid_image") from exc
+
+    # Sniff the format from bytes (content-type and file extension can be faked).
+    allowed = {"JPEG", "PNG", "WEBP"}
+    fmt = (image.format or "").upper()
+    if fmt not in allowed:
+        raise ProcessingError("Unsupported image format.", code="unsupported_image_format")
+
+    try:
         image.load()
         image = ImageOps.exif_transpose(image)
     except Exception as exc:  # pragma: no cover - PIL internal
-        raise ProcessingError("Unsupported or corrupted image.") from exc
+        raise ProcessingError("Unsupported or corrupted image.", code="invalid_image") from exc
     if image.width * image.height > MAX_PIXELS:
-        raise ProcessingError("Image dimensions too large.")
+        raise ProcessingError("Image dimensions too large.", code="image_too_large")
     return image
 
 
@@ -62,7 +74,9 @@ def remove_background(image: Image.Image) -> Image.Image:
     try:
         from rembg import remove
     except Exception as exc:  # pragma: no cover - runtime dependency
-        raise ProcessingError("Background removal model unavailable.") from exc
+        raise ProcessingError(
+            "Background removal model unavailable.", code="background_removal_unavailable"
+        ) from exc
 
     result = remove(image)
     if isinstance(result, Image.Image):
@@ -81,7 +95,7 @@ def normalize_hex_color(value: str | None) -> str | None:
     if len(raw) == 3:
         raw = "".join(ch * 2 for ch in raw)
     if len(raw) != 6 or any(ch not in string.hexdigits for ch in raw):
-        raise ProcessingError("Invalid custom background color.")
+        raise ProcessingError("Invalid custom background color.", code="invalid_color")
     return f"#{raw.lower()}"
 
 
@@ -105,12 +119,12 @@ def apply_background(
     }
     if background_key == "custom":
         if not background_hex:
-            raise ProcessingError("Custom background color required.")
+            raise ProcessingError("Custom background color required.", code="missing_custom_color")
         color = hex_to_rgb(background_hex)
     elif background_key in colors:
         color = colors[background_key]
     else:
-        raise ProcessingError("Unsupported background color.")
+        raise ProcessingError("Unsupported background color.", code="unsupported_background")
     base = Image.new("RGBA", image.size, color + (255,))
     return Image.alpha_composite(base, to_rgba(image))
 
@@ -118,7 +132,7 @@ def apply_background(
 def normalize_output_format(value: str) -> str:
     fmt = value.strip().lower()
     if fmt not in {"png", "jpeg"}:
-        raise ProcessingError("Unsupported output format.")
+        raise ProcessingError("Unsupported output format.", code="unsupported_output_format")
     return fmt
 
 
@@ -167,10 +181,10 @@ def normalize_request(req: ProcessRequest) -> ProcessRequest:
     background_hex = normalize_hex_color(req.background_hex)
 
     if background == "custom" and not background_hex:
-        raise ProcessingError("Custom background color required.")
+        raise ProcessingError("Custom background color required.", code="missing_custom_color")
 
     if style_key is not None and style_key not in STYLES:
-        raise ProcessingError("Unknown style preset.")
+        raise ProcessingError("Unknown style preset.", code="unknown_style")
 
     if style_key is not None:
         style = STYLES[style_key]
@@ -212,7 +226,7 @@ def clamp(value: float, min_value: float, max_value: float) -> float:
 
 def ensure_finite(value: float, label: str) -> float:
     if not math.isfinite(value):
-        raise ProcessingError(f"Invalid value for {label}.")
+        raise ProcessingError(f"Invalid value for {label}.", code="invalid_parameter")
     return value
 
 
@@ -237,7 +251,7 @@ def clamp_request(req: ProcessRequest) -> ProcessRequest:
 def ensure_preset(preset_key: str) -> tuple[float, int | None, int | None]:
     key = preset_key.strip().lower()
     if key not in PRESETS:
-        raise ProcessingError("Unknown crop preset.")
+        raise ProcessingError("Unknown crop preset.", code="unknown_preset")
     preset = PRESETS[key]
     return preset.ratio, preset.width, preset.height
 
@@ -266,7 +280,7 @@ def to_bytes(image: Image.Image, output_format: str, jpeg_quality: int = 92) -> 
     buffer = io.BytesIO()
     fmt = output_format.lower()
     if fmt not in {"png", "jpeg"}:
-        raise ProcessingError("Unsupported output format.")
+        raise ProcessingError("Unsupported output format.", code="unsupported_output_format")
     if fmt == "jpeg":
         if image.mode in {"RGBA", "LA"}:
             background = Image.new("RGB", image.size, (255, 255, 255))

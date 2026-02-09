@@ -78,7 +78,9 @@ def test_process_rejects_invalid_custom_background_hex() -> None:
         },
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "Invalid custom background color."
+    detail = response.json()["detail"]
+    assert detail["code"] == "invalid_color"
+    assert detail["message"] == "Invalid custom background color."
 
 
 def test_process_rejects_unsupported_format() -> None:
@@ -94,7 +96,46 @@ def test_process_rejects_unsupported_format() -> None:
         },
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "Unsupported output format."
+    detail = response.json()["detail"]
+    assert detail["code"] == "unsupported_output_format"
+    assert detail["message"] == "Unsupported output format."
+
+
+def test_process_rejects_invalid_image_bytes() -> None:
+    response = client.post(
+        "/api/process",
+        files={"image": ("input.png", b"not an image", "image/png")},
+        data={
+            "remove_bg": "false",
+            "background": "white",
+            "preset": "portrait-4x5",
+            "format": "png",
+        },
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["code"] == "invalid_image"
+
+
+def test_process_rejects_unsupported_image_format() -> None:
+    # GIF is a common image type but not a target export format for this studio.
+    image = Image.new("RGB", (100, 120), (120, 140, 160))
+    buffer = io.BytesIO()
+    image.save(buffer, format="GIF")
+    payload = buffer.getvalue()
+    response = client.post(
+        "/api/process",
+        files={"image": ("input.gif", payload, "image/gif")},
+        data={
+            "remove_bg": "false",
+            "background": "white",
+            "preset": "portrait-4x5",
+            "format": "png",
+        },
+    )
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["code"] == "unsupported_image_format"
 
 
 def test_batch_returns_zip_with_processed_images() -> None:

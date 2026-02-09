@@ -51,6 +51,7 @@ const elements = {
   exportBundleBtn: document.getElementById("exportBundleBtn"),
   importBundleBtn: document.getElementById("importBundleBtn"),
   importBundleInput: document.getElementById("importBundleInput"),
+  bundleOverwrite: document.getElementById("bundleOverwrite"),
   profileName: document.getElementById("profileName"),
   saveProfileBtn: document.getElementById("saveProfileBtn"),
   profilesList: document.getElementById("profilesList"),
@@ -166,6 +167,32 @@ function safeParseJSON(value) {
   } catch {
     return null;
   }
+}
+
+async function safeReadJSON(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function extractApiErrorMessage(payload) {
+  if (!payload || typeof payload !== "object") return "";
+  const detail = payload.detail;
+  if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object") {
+    if (typeof detail.message === "string" && detail.message) return detail.message;
+    if (typeof detail.detail === "string" && detail.detail) return detail.detail;
+  }
+  if (typeof payload.message === "string") return payload.message;
+  return "";
+}
+
+async function responseErrorMessage(response, fallback) {
+  const payload = await safeReadJSON(response);
+  const message = extractApiErrorMessage(payload);
+  return message || fallback;
 }
 
 function readSettings() {
@@ -693,6 +720,50 @@ function downloadTextFile(filename, text, mimeType = "application/json") {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+function sanitizeImportedSettings(settings) {
+  if (!settings || typeof settings !== "object") {
+    throw new Error("Bundle profile settings are missing.");
+  }
+
+  const sanitized = {};
+  if (typeof settings.removeBg === "boolean") {
+    sanitized.removeBg = settings.removeBg;
+  }
+
+  const backgrounds = new Set(["white", "light", "blue", "gray", "custom", "transparent"]);
+  if (typeof settings.background === "string" && backgrounds.has(settings.background)) {
+    sanitized.background = settings.background;
+  }
+  if (typeof settings.backgroundHex === "string") {
+    sanitized.backgroundHex = settings.backgroundHex;
+  }
+  if (typeof settings.preset === "string") {
+    sanitized.preset = settings.preset;
+  }
+
+  sanitized.topBias = clampNumber(settings.topBias, 0, 1, 0.2);
+
+  if (settings.format === "png" || settings.format === "jpeg") {
+    sanitized.format = settings.format;
+  }
+  sanitized.jpegQuality = Math.round(clampNumber(settings.jpegQuality, 60, 100, 92));
+
+  if (typeof settings.autoUpdate === "boolean") {
+    sanitized.autoUpdate = settings.autoUpdate;
+  }
+  if (typeof settings.style === "string") {
+    sanitized.style = settings.style;
+  }
+  if (typeof settings.useCase === "string") {
+    sanitized.useCase = settings.useCase;
+  }
+  if (settings.sliders && typeof settings.sliders === "object") {
+    sanitized.sliders = normalizeSliderValues(settings.sliders);
+  }
+
+  return sanitized;
+}
+
 async function exportPreset() {
   const payload = {
     app: "ai-headshot-studio",
@@ -748,6 +819,15 @@ function importBundleData(parsed) {
   if (!parsed || typeof parsed !== "object") {
     throw new Error("Invalid bundle JSON.");
   }
+  if (typeof parsed.app === "string" && parsed.app && parsed.app !== "ai-headshot-studio") {
+    throw new Error("Bundle is not for AI Headshot Studio.");
+  }
+  if (
+    Object.prototype.hasOwnProperty.call(parsed, "version") &&
+    typeof parsed.version !== "number"
+  ) {
+    throw new Error("Bundle version is invalid.");
+  }
   const profiles = parsed.profiles;
   if (!Array.isArray(profiles) || profiles.length === 0) {
     throw new Error("Bundle has no profiles.");
@@ -756,15 +836,34 @@ function importBundleData(parsed) {
     throw new Error("Bundle has too many profiles.");
   }
 
+  const overwrite = Boolean(elements.bundleOverwrite?.checked);
+  let added = 0;
+  let overwritten = 0;
+  let renamed = 0;
+
   profiles.forEach((entry) => {
     if (!entry || typeof entry !== "object") {
       throw new Error("Bundle profile is invalid.");
     }
-    const name = uniqueProfileName(entry.name);
-    const settings =
-      entry.settings && typeof entry.settings === "object" ? entry.settings : null;
-    if (!settings) {
-      throw new Error("Bundle profile settings are missing.");
+    const rawName = normalizeProfileName(entry.name);
+    if (!rawName) {
+      throw new Error("Bundle profile name is missing.");
+    }
+    const settings = sanitizeImportedSettings(entry.settings);
+
+    const existingIndex = state.profiles.findIndex((profile) => profile.name === rawName);
+    if (existingIndex >= 0 && overwrite) {
+      const existing = state.profiles[existingIndex];
+      const updated = { ...existing, settings };
+      state.profiles.splice(existingIndex, 1);
+      state.profiles.unshift(updated);
+      overwritten += 1;
+      return;
+    }
+
+    const name = existingIndex >= 0 ? uniqueProfileName(rawName) : rawName;
+    if (name !== rawName) {
+      renamed += 1;
     }
     state.profiles.unshift({
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -772,11 +871,19 @@ function importBundleData(parsed) {
       settings,
       createdAt: new Date().toISOString(),
     });
+    added += 1;
   });
 
   state.profiles = state.profiles.slice(0, 30);
   writeProfiles(state.profiles);
   renderProfiles();
+
+  const parts = [];
+  if (added) parts.push(`${added} added`);
+  if (overwritten) parts.push(`${overwritten} overwritten`);
+  if (renamed) parts.push(`${renamed} renamed`);
+  const summary = parts.length ? parts.join(", ") : "No changes";
+  return `Bundle imported: ${summary}.`;
 }
 
 async function importBundle(file) {
@@ -790,7 +897,7 @@ async function importBundle(file) {
   if (!parsed || typeof parsed !== "object") {
     throw new Error("Invalid bundle JSON.");
   }
-  importBundleData(parsed);
+  return importBundleData(parsed);
 }
 
 function applyImportedPresetSettings(settings) {
@@ -883,13 +990,13 @@ async function importPreset(file) {
   }
 
   if (Array.isArray(parsed.profiles)) {
-    importBundleData(parsed);
-    return;
+    return importBundleData(parsed);
   }
 
   const settings =
     parsed.settings && typeof parsed.settings === "object" ? parsed.settings : parsed;
   applyImportedPresetSettings(settings);
+  return "Imported.";
 }
 
 function syncStyleIfSlidersChanged() {
@@ -1378,11 +1485,7 @@ async function processBatch() {
     });
 
     if (!response.ok) {
-      let message = "Batch processing failed.";
-      try {
-        const detail = await response.json();
-        message = detail.detail || message;
-      } catch {}
+      const message = await responseErrorMessage(response, "Batch processing failed.");
       throw new Error(message);
     }
 
@@ -1434,11 +1537,7 @@ async function processImage() {
     });
 
     if (!response.ok) {
-      let message = "Processing failed.";
-      try {
-        const detail = await response.json();
-        message = detail.detail || message;
-      } catch {}
+      const message = await responseErrorMessage(response, "Processing failed.");
       throw new Error(message);
     }
 
@@ -1661,8 +1760,8 @@ function bindEvents() {
     event.target.value = "";
     if (!file) return;
     try {
-      await importPreset(file);
-      showToast("Imported.");
+      const message = await importPreset(file);
+      showToast(message || "Imported.");
     } catch (error) {
       showToast(error.message || "Could not import preset.");
     }
@@ -1679,8 +1778,8 @@ function bindEvents() {
     event.target.value = "";
     if (!file) return;
     try {
-      await importBundle(file);
-      showToast("Bundle imported.");
+      const message = await importBundle(file);
+      showToast(message || "Bundle imported.");
     } catch (error) {
       showToast(error.message || "Could not import bundle.");
     }
