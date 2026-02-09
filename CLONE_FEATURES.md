@@ -9,12 +9,20 @@
 - GitHub Actions signals (`21579321573` historical failure root-caused; latest runs green)
 
 ## Candidate Features To Do
-- [ ] P2: Add batch processing MVP (queue + ZIP download) aligned with roadmap.
-- [ ] P2: Add face-guided crop framing (lightweight detector) for higher-quality automatic composition.
-- [ ] P2: Add preset bundle support (multiple named profiles in one export/import file).
-- [ ] P3: Add visual regression smoke script for `static/` workflow interactions.
+- [ ] P2: Face-guided crop framing (prefer lightweight / optional dependency); fall back to `top_bias` when unavailable.
+- [ ] P2: Harden upload validation (server-side MIME sniff + image format allowlist) and return structured error codes for better UX.
+- [ ] P2: Add batch CLI helper (process a folder to outputs/ + optional ZIP) for non-UI workflows.
+- [ ] P3: Add Docker `HEALTHCHECK` and set container-friendly default host binding (keep dev behavior unchanged).
+- [ ] P3: Add visual regression smoke script for `static/` workflow interactions (optional, fast, and deterministic).
+- [ ] P3: Add perf micro-benchmark for processing pipeline (guardrail against slow regressions).
+- [ ] P3: Add optional “keep original background” toggle for batch mode (parity with batch tooling expectations).
+- [ ] P3: Add “profile suggestions” (auto-name saved profiles based on use-case/preset/style) to reduce friction.
 
 ## Implemented
+- [2026-02-09] Batch processing MVP (multi-upload to server-side ZIP download).
+  - Evidence: `src/ai_headshot_studio/app.py` (`POST /api/batch`), `tests/test_api.py` (ZIP assertions), `scripts/smoke_api.sh` (batch smoke).
+- [2026-02-09] Preset bundle library (saved named profiles) + bundle export/import (JSON).
+  - Evidence: `static/index.html` (Profiles card), `static/app.js` (profile storage + bundle import/export), `static/styles.css` (profile UI styles).
 - [2026-02-09] Structured runtime diagnostics endpoint for production visibility.
   - Evidence: `src/ai_headshot_studio/app.py` (`/api/health`, dependency-safe background-removal diagnostics).
 - [2026-02-09] Startup diagnostics panel in the web studio.
@@ -45,6 +53,8 @@
 - Health diagnostics should avoid importing `rembg` directly: `rembg` can call `sys.exit(1)` when ONNX runtime support is missing.
 - A dedicated smoke command (`make smoke`) catches startup/runtime regressions earlier than unit tests alone.
 - GitHub Actions annotations can surface near-term maintenance debt before it becomes a failing check.
+- Market baseline: batch workflows commonly export a single ZIP and let users choose output format and folder name; “keep original background” is a common batch toggle.
+- Market baseline: common web tools cap image size (example: Canva Background Remover works under ~9MB and downscales to 10MP).
 
 ## Notes
 - This file is maintained by the autonomous clone loop.

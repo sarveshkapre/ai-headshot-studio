@@ -2,6 +2,36 @@
 
 ## Decisions
 
+### 2026-02-09 | Batch processing ZIP workflow
+- Decision: Add `POST /api/batch` to process multiple images with the same settings and return a single ZIP download; add a matching Batch panel in the studio UI.
+- Why: Batch export is a baseline expectation for background/retouch workflows and materially reduces time-to-value for users processing multiple photos.
+- Evidence:
+  - Code: `src/ai_headshot_studio/app.py` (`/api/batch`), `static/index.html`, `static/app.js`, `static/styles.css`.
+  - Tests: `tests/test_api.py` (ZIP response + image assertions).
+  - Smoke: `scripts/smoke_api.sh` (batch ZIP smoke path).
+- Validation:
+  - `make check` (pass)
+  - `make smoke` output includes `batch smoke ok: 2x 600x600 jpeg in zip`
+- Commit: `e768501f47f76a9ac7e91c496f598bdd0ac7fbcb`.
+- Confidence: High.
+- Trust label: `verified-local`.
+- Follow-ups:
+  - Add “continue on error” mode that returns a ZIP including an `errors.json` report instead of failing the whole batch.
+  - Add total batch size limit enforcement (sum of bytes) to keep worst-case memory bounded.
+
+### 2026-02-09 | Saved profiles + bundle export/import
+- Decision: Add a local “Profiles” library (named profiles with apply/delete) and a bundle JSON format for exporting/importing multiple profiles at once.
+- Why: Users often iterate toward a look and reuse it; named profiles + bundles reduce friction and enable sharing repeatable setups.
+- Evidence:
+  - Code: `static/index.html` (Profiles card), `static/app.js` (profiles storage + bundle import/export), `static/styles.css` (profiles UI styles).
+  - Validation: `node --check static/app.js` (pass)
+- Commit: `e768501f47f76a9ac7e91c496f598bdd0ac7fbcb`.
+- Confidence: Medium-high.
+- Trust label: `verified-local`.
+- Follow-ups:
+  - Add bundle schema validation + clearer conflict resolution UX (merge/overwrite prompts).
+  - Allow “save from use-case” with one-click suggested names.
+
 ### 2026-02-09 | Structured health diagnostics contract
 - Decision: Expand `GET /api/health` to return structured diagnostics (`status`, `service`, `version`, limits, and background-removal availability) and consume it in the UI diagnostics panel.
 - Why: Production readiness needs fast local observability and a stable endpoint contract for smoke checks and frontend status visibility.
@@ -49,3 +79,17 @@
 - Trust label: `ci-verified`.
 - Follow-ups:
   - Re-check all automation repos for remaining `codeql-action@v3` usage.
+
+## Verification Evidence
+
+### 2026-02-09
+- `make check` (pass) — `17 passed`
+- `node --check static/app.js` (pass)
+- `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip`
+- `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`
+
+## Market Scan Notes (Untrusted)
+
+### 2026-02-09
+- PhotoRoom positions a batch workflow with a ZIP download and per-batch output options; includes toggles like “Keep original background”. Source: `https://www.photoroom.com/tools/batch-mode`
+- Canva background remover help docs describe input limits (example: <9MB, downscales to 10MP). Source: `https://www.canva.com/help/background-remover/`
