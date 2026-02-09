@@ -186,6 +186,9 @@
 - `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip` (after pre-decode pixel guard)
 - `gh run watch 21825642565 --exit-status` (pass) — GitHub Actions `CI` on `main`
 - `gh run watch 21825642558 --exit-status` (pass) — GitHub Actions `CodeQL` on `main`
+- `gh run watch 21834774525 --exit-status` (pass) — GitHub Actions `CI` on `main` (cycle 4 pushes)
+- `gh run watch 21834774532 --exit-status` (pass) — GitHub Actions `CodeQL` on `main` (cycle 4 pushes)
+- `gh run watch 21834774590 --exit-status` (pass) — GitHub Actions `Secret Scan` on `main` (cycle 4 pushes)
 
 ## Market Scan Notes (Untrusted)
 
