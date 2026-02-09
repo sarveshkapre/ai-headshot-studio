@@ -13,6 +13,7 @@ from ai_headshot_studio.processing import (
     available_styles,
     crop_to_aspect,
     crop_to_aspect_focus,
+    focus_bbox,
     load_image,
     process_image,
     to_bytes,
@@ -187,6 +188,50 @@ def test_alpha_foreground_bbox_detects_non_empty_alpha() -> None:
             image.putpixel((x, y), (255, 255, 255, 255))
     bbox = alpha_foreground_bbox(image)
     assert bbox is not None
+
+
+def test_focus_bbox_uses_face_bbox_when_alpha_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    import ai_headshot_studio.processing as processing
+
+    image = Image.new("RGB", (200, 300), (0, 0, 0))
+    monkeypatch.setattr(processing, "face_subject_bbox", lambda _img: (10, 20, 30, 40))
+    assert focus_bbox(image) == (10, 20, 30, 40)
+
+
+def test_process_image_passes_focus_bbox_to_crop(monkeypatch: pytest.MonkeyPatch) -> None:
+    import ai_headshot_studio.processing as processing
+
+    data = make_image(1200, 1600)
+    req = ProcessRequest(
+        remove_bg=False,
+        background="white",
+        background_hex=None,
+        preset="portrait-4x5",
+        style=None,
+        top_bias=0.2,
+        brightness=1.0,
+        contrast=1.0,
+        color=1.0,
+        sharpness=1.0,
+        soften=0.0,
+        jpeg_quality=92,
+        output_format="png",
+    )
+
+    expected = (12, 34, 56, 78)
+    monkeypatch.setattr(processing, "focus_bbox", lambda _img: expected)
+
+    captured: dict[str, object] = {}
+
+    def fake_crop(
+        img: Image.Image, *, ratio: float, top_bias: float, focus_bbox: object
+    ) -> Image.Image:
+        captured["focus_bbox"] = focus_bbox
+        return img
+
+    monkeypatch.setattr(processing, "crop_to_aspect_focus", fake_crop)
+    processing.process_image(data, req)
+    assert captured["focus_bbox"] == expected
 
 
 def test_load_image_applies_exif_orientation() -> None:

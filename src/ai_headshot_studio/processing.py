@@ -188,6 +188,99 @@ def alpha_foreground_bbox(image: Image.Image) -> tuple[int, int, int, int] | Non
     return bbox
 
 
+def face_subject_bbox(image: Image.Image) -> tuple[int, int, int, int] | None:
+    """Best-effort subject bounds from a face detector (when available).
+
+    This is intentionally optional: if the detector dependency isn't installed or
+    no face is found, returns None.
+    """
+
+    try:
+        import cv2
+        import numpy as np
+    except Exception:
+        return None
+
+    width, height = image.size
+    if width <= 0 or height <= 0:
+        return None
+
+    # Downscale large inputs for speed and to avoid huge temporary arrays.
+    max_dim = 900
+    scale = 1.0
+    if max(width, height) > max_dim:
+        scale = max_dim / float(max(width, height))
+        scaled = image.resize(
+            (int(round(width * scale)), int(round(height * scale))), Image.BILINEAR
+        )
+    else:
+        scaled = image
+
+    try:
+        rgb = scaled.convert("RGB")
+        arr = np.array(rgb)
+        gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+    except Exception:
+        return None
+
+    try:
+        cascade_path = getattr(getattr(cv2, "data", object()), "haarcascades", "")
+        cascade = cv2.CascadeClassifier(str(cascade_path) + "haarcascade_frontalface_default.xml")
+        faces = cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            flags=getattr(cv2, "CASCADE_SCALE_IMAGE", 0),
+            minSize=(max(24, int(min(gray.shape[0], gray.shape[1]) * 0.06)),) * 2,
+        )
+    except Exception:
+        return None
+
+    if faces is None or len(faces) == 0:
+        return None
+
+    # Choose the largest face as the primary subject.
+    x, y, w, h = max(faces, key=lambda item: int(item[2]) * int(item[3]))
+
+    # Map back to original resolution.
+    if scale != 1.0:
+        inv = 1.0 / scale
+        x = int(round(x * inv))
+        y = int(round(y * inv))
+        w = int(round(w * inv))
+        h = int(round(h * inv))
+
+    # Expand face -> approximate head+shoulders subject bounds.
+    pad_x = int(round(w * 0.60))
+    pad_top = int(round(h * 0.80))
+    pad_bottom = int(round(h * 2.40))
+
+    left = max(0, x - pad_x)
+    top = max(0, y - pad_top)
+    right = min(width, x + w + pad_x)
+    bottom = min(height, y + h + pad_bottom)
+
+    if right <= left or bottom <= top:
+        return None
+
+    bbox_area = (right - left) * (bottom - top)
+    if bbox_area < int(width * height * 0.01):
+        # Ignore tiny detections (e.g., a face far in the background).
+        return None
+    return (left, top, right, bottom)
+
+
+def focus_bbox(image: Image.Image) -> tuple[int, int, int, int] | None:
+    """Return the best available focus bbox for crop framing.
+
+    Priority:
+    1) Alpha-mask derived foreground bbox (best for remove_bg/transparent inputs).
+    2) Optional face-derived subject bbox (best-effort for regular photos).
+    """
+
+    return alpha_foreground_bbox(image) or face_subject_bbox(image)
+
+
 def crop_to_aspect_focus(
     image: Image.Image,
     *,
@@ -334,7 +427,7 @@ def process_image(data: bytes, req: ProcessRequest) -> Image.Image:
     if req.remove_bg:
         image = remove_background(image)
 
-    focus_bbox = alpha_foreground_bbox(image)
+    crop_focus_bbox = focus_bbox(image)
 
     if req.remove_bg or req.background != "transparent":
         image = apply_background(to_rgba(image), req.background, req.background_hex)
@@ -342,7 +435,9 @@ def process_image(data: bytes, req: ProcessRequest) -> Image.Image:
     image = apply_adjustments(image, req)
 
     ratio, width, height = ensure_preset(req.preset)
-    image = crop_to_aspect_focus(image, ratio=ratio, top_bias=req.top_bias, focus_bbox=focus_bbox)
+    image = crop_to_aspect_focus(
+        image, ratio=ratio, top_bias=req.top_bias, focus_bbox=crop_focus_bbox
+    )
     image = resize_if_needed(image, width=width, height=height)
     return image
 

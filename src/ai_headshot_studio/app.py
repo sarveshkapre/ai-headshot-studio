@@ -155,6 +155,7 @@ async def health() -> dict[str, object]:
         },
         "features": {
             "background_removal": background_removal_diagnostics(),
+            "face_framing": face_framing_diagnostics(),
         },
     }
 
@@ -182,6 +183,27 @@ def background_removal_diagnostics() -> dict[str, str | bool]:
         details["version"] = metadata.version("rembg")
     except metadata.PackageNotFoundError:
         details["version"] = "unknown"
+    return details
+
+
+@lru_cache(maxsize=1)
+def face_framing_diagnostics() -> dict[str, str | bool]:
+    details: dict[str, str | bool] = {
+        "mode": "local",
+        "provider": "opencv-haarcascade",
+        "available": False,
+    }
+    if util.find_spec("cv2") is None:
+        details["error"] = "missing_dependency"
+        return details
+    details["available"] = True
+    try:
+        details["version"] = metadata.version("opencv-python-headless")
+    except metadata.PackageNotFoundError:
+        try:
+            details["version"] = metadata.version("opencv-python")
+        except metadata.PackageNotFoundError:
+            details["version"] = "unknown"
     return details
 
 

@@ -31,6 +31,9 @@ dev = [
   "ruff>=0.4",
   "types-Pillow>=10.2",
 ]
+face = [
+  "opencv-python-headless>=4.10",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_headshot_studio"]

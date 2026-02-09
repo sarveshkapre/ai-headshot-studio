@@ -85,6 +85,7 @@ const elements = {
   healthSummary: document.getElementById("healthSummary"),
   diagApi: document.getElementById("diagApi"),
   diagRembg: document.getElementById("diagRembg"),
+  diagFace: document.getElementById("diagFace"),
   diagUploadLimit: document.getElementById("diagUploadLimit"),
   sliders: {
     brightness: document.getElementById("brightness"),
@@ -1313,6 +1314,7 @@ async function loadHealthDiagnostics() {
   elements.healthSummary.textContent = "Loading local API status...";
   elements.diagApi.textContent = "Unknown";
   elements.diagRembg.textContent = "Unknown";
+  elements.diagFace.textContent = "Unknown";
   elements.diagUploadLimit.textContent = "--";
 
   try {
@@ -1324,6 +1326,8 @@ async function loadHealthDiagnostics() {
     const apiOk = data?.status === "ok";
     const rembg = data?.features?.background_removal;
     const rembgAvailable = Boolean(rembg?.available);
+    const face = data?.features?.face_framing;
+    const faceAvailable = Boolean(face?.available);
     const version = typeof data?.version === "string" ? data.version : "unknown";
     const uploadMb = Number(data?.limits?.max_upload_mb);
     const uploadBytes = Number(data?.limits?.max_upload_bytes);
@@ -1344,6 +1348,7 @@ async function loadHealthDiagnostics() {
     setHealthBadge(apiOk ? "ok" : "error", apiOk ? "Healthy" : "Degraded");
     elements.diagApi.textContent = apiOk ? "OK" : "Unavailable";
     elements.diagRembg.textContent = rembgAvailable ? "Ready" : "Unavailable";
+    elements.diagFace.textContent = faceAvailable ? "Ready" : "Unavailable";
     elements.diagUploadLimit.textContent =
       Number.isFinite(uploadMb) && uploadMb > 0 ? `${uploadMb}MB` : "--";
     elements.healthSummary.textContent = `v${version} running locally.`;
@@ -1351,6 +1356,7 @@ async function loadHealthDiagnostics() {
     setHealthBadge("error", "Offline");
     elements.diagApi.textContent = "Unreachable";
     elements.diagRembg.textContent = "Unknown";
+    elements.diagFace.textContent = "Unknown";
     elements.diagUploadLimit.textContent = "--";
     elements.healthSummary.textContent =
       "Could not reach /api/health. Start the server and refresh this page.";

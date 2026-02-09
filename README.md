@@ -6,6 +6,7 @@ Local-first headshot enhancement studio for background removal, retouching, and 
 - Background removal (local `rembg`)
 - Lighting + retouch sliders (brightness, contrast, color, sharpness, soften)
 - Crop presets with headshot-friendly framing
+- Optional face-guided framing (when OpenCV is installed)
 - One-click use-case presets (LinkedIn, resume, passport)
 - Preset export/import (JSON) for reusable studio setups
 - Pre-process export estimator (predicted dimensions + approximate output size)
@@ -22,6 +23,12 @@ make check
 make smoke
 ```
 Open `http://127.0.0.1:8000`.
+
+### Optional face framing dependency
+Face-guided crop framing is best-effort and works when OpenCV is installed:
+```bash
+pip install -e ".[face]"
+```
 
 ## Docker
 ```bash
