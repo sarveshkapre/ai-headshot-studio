@@ -1,4 +1,3 @@
 # Changelog
 
-## [Unreleased]
-- Initial scaffold and MVP implementation.
+This repository tracks changes in the root `CHANGELOG.md`.

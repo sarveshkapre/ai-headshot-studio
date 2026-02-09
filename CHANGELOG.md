@@ -4,6 +4,9 @@
 
 ### Added
 - In-app, dismissible error banner in the studio UI (no blocking browser alerts).
+- Structured API error responses (`code` + `message`) and server-side upload validation (MIME sniff + format allowlist).
+- Bundle import conflict handling (optional overwrite toggle + import summary).
+- Docker `HEALTHCHECK` for `/api/health`.
 - Keyboard accessibility for the upload dropzone and `Ctrl/⌘ + Enter` to process.
 - Manual mode + one-click reset for retouch sliders.
 - Local settings persistence (saved to `localStorage`) and a “Reset studio” control.

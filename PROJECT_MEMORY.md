@@ -2,6 +2,32 @@
 
 ## Decisions
 
+### 2026-02-09 | Structured API errors + stricter server-side upload validation
+- Decision: Return structured API error payloads (`detail.code`, `detail.message`) and enforce server-side image validation via format sniffing + allowlist.
+- Why: Improves UX (client can surface consistent messages) and hardens the API against spoofed content-types and non-image uploads.
+- Evidence:
+  - Code: `src/ai_headshot_studio/app.py` (`api_detail`, structured `HTTPException.detail`), `src/ai_headshot_studio/processing.py` (input format allowlist).
+  - Tests: `tests/test_api.py` (invalid bytes + GIF rejection, structured error assertions).
+  - UI: `static/app.js` (parses structured errors for `/api/process` and `/api/batch`).
+- Validation:
+  - `make check` (pass) — `19 passed`
+  - `make smoke` (pass)
+  - `node --check static/app.js` (pass)
+- Commit: `6bfc8d337b18b2a4b9a20a4d11d8c98b0dbe8f19`.
+- Confidence: High.
+- Trust label: `verified-local`.
+
+### 2026-02-09 | Bundle import validation + conflict handling toggle
+- Decision: Validate profile bundle imports (basic schema checks + settings sanitization) and add an “overwrite conflicts” toggle; show a summary message after import.
+- Why: Bundles are a sharing surface; validation prevents broken settings from being stored, and conflict handling reduces friction when importing into an existing library.
+- Evidence:
+  - Code: `static/index.html` (`bundleOverwrite`), `static/app.js` (`sanitizeImportedSettings`, import summary, overwrite behavior).
+- Validation:
+  - `node --check static/app.js` (pass)
+- Commit: `6bfc8d337b18b2a4b9a20a4d11d8c98b0dbe8f19`.
+- Confidence: Medium-high.
+- Trust label: `verified-local`.
+
 ### 2026-02-09 | Batch processing ZIP workflow
 - Decision: Add `POST /api/batch` to process multiple images with the same settings and return a single ZIP download; add a matching Batch panel in the studio UI.
 - Why: Batch export is a baseline expectation for background/retouch workflows and materially reduces time-to-value for users processing multiple photos.
@@ -83,13 +109,20 @@
 ## Verification Evidence
 
 ### 2026-02-09
-- `make check` (pass) — `17 passed`
+- `make check` (pass) — `19 passed`
 - `node --check static/app.js` (pass)
 - `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip`
 - `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`
+- `docker build -t ai-headshot-studio:local .` (fail) — `docker` not installed in this environment
 
 ## Market Scan Notes (Untrusted)
 
 ### 2026-02-09
 - PhotoRoom positions a batch workflow with a ZIP download and per-batch output options; includes toggles like “Keep original background”. Source: `https://www.photoroom.com/tools/batch-mode`
 - Canva background remover help docs describe input limits (example: <9MB, downscales to 10MP). Source: `https://www.canva.com/help/background-remover/`
+
+### 2026-02-09 (Cycle 2) | Batch + limits expectations
+- Batch baseline: common batch tools expose output format choices (PNG/JPEG/WEBP) and allow naming/organizing outputs. Source: `https://help.photoroom.com/en/articles/12137322-edit-multiple-photos-with-the-batch-feature-web-app`
+- Batch baseline: “keep original background” is presented as a distinct template/option in batch flows. Source: `https://help.photoroom.com/en/articles/12818584-keep-the-original-background-when-using-the-batch-feature`
+- Upload limits baseline: tools document maximum input size/resolution and route higher limits to paid tiers. Source: `https://www.remove.bg/it/help/a/what-is-the-maximum-image-resolution-file-size`
+- Upload limits baseline: online background remover experiences commonly cap file size (example: ~25MB). Source: `https://www.canva.com/learn/background-remover/`

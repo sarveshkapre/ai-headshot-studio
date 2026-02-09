@@ -9,11 +9,6 @@
 - GitHub Actions signals (`21579321573` historical failure root-caused; latest runs green)
 
 ## Candidate Features To Do
-### Selected (Cycle 2 session)
-- [ ] P1: Harden upload validation (server-side MIME sniff + image format allowlist) and return structured error codes for better UX (UI should render the message).
-- [ ] P1: Preset bundle import validation + conflict handling UX (offer “overwrite existing” vs “keep both (rename)” and show a summary toast).
-- [ ] P2: Add Docker `HEALTHCHECK` for `/api/health` (keep dev behavior unchanged).
-
 ### Backlog
 - [ ] P2: Face-guided crop framing (prefer lightweight / optional dependency); fall back to `top_bias` when unavailable.
 - [ ] P2: Add batch CLI helper (process a folder to outputs/ + optional ZIP) for non-UI workflows.
@@ -23,6 +18,12 @@
 - [ ] P3: Add batch “continue on error” mode (returns a ZIP including `errors.json` instead of failing the entire batch).
 
 ## Implemented
+- [2026-02-09] Hardened upload validation + structured API error payloads (`code`, `message`).
+  - Evidence: `src/ai_headshot_studio/processing.py` (format allowlist), `src/ai_headshot_studio/app.py` (structured `detail`), `tests/test_api.py` (invalid bytes + GIF rejection).
+- [2026-02-09] Preset bundle import validation + conflict handling (overwrite toggle + summary toast).
+  - Evidence: `static/index.html` (`bundleOverwrite` toggle), `static/app.js` (`sanitizeImportedSettings`, import summary).
+- [2026-02-09] Docker health checks wired to `/api/health`.
+  - Evidence: `Dockerfile` (`HEALTHCHECK`).
 - [2026-02-09] Batch processing MVP (multi-upload to server-side ZIP download).
   - Evidence: `src/ai_headshot_studio/app.py` (`POST /api/batch`), `tests/test_api.py` (ZIP assertions), `scripts/smoke_api.sh` (batch smoke).
 - [2026-02-09] Preset bundle library (saved named profiles) + bundle export/import (JSON).
