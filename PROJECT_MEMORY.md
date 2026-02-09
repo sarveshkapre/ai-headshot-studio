@@ -28,6 +28,18 @@
 - Confidence: Medium-high.
 - Trust label: `verified-local`.
 
+### 2026-02-09 | Docker healthcheck for `/api/health`
+- Decision: Add a Docker `HEALTHCHECK` that probes `GET /api/health`.
+- Why: Improves production readiness by making container health observable to orchestrators without adding extra endpoints.
+- Evidence:
+  - Code: `Dockerfile` (`HEALTHCHECK` command).
+- Validation:
+  - `make smoke` still exercises `/api/health` (pass).
+  - Unable to run `docker build` locally in this environment (Docker not installed).
+- Commit: `e8c950fd0d6499fbc1d0c26b7d4f991eef0c0e67`.
+- Confidence: Medium (runtime unverified here).
+- Trust label: `verified-local`.
+
 ### 2026-02-09 | Batch processing ZIP workflow
 - Decision: Add `POST /api/batch` to process multiple images with the same settings and return a single ZIP download; add a matching Batch panel in the studio UI.
 - Why: Batch export is a baseline expectation for background/retouch workflows and materially reduces time-to-value for users processing multiple photos.
