@@ -144,6 +144,8 @@
 - `docker build -t ai-headshot-studio:local .` (fail) — `docker` not installed in this environment
 - `make check` (pass) — `21 passed in 0.42s` (rerun after batch robustness changes)
 - `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip` (rerun after batch robustness changes)
+- `gh run watch 21825642565 --exit-status` (pass) — GitHub Actions `CI` on `main`
+- `gh run watch 21825642558 --exit-status` (pass) — GitHub Actions `CodeQL` on `main`
 
 ## Market Scan Notes (Untrusted)
 
