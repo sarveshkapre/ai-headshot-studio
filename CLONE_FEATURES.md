@@ -9,14 +9,18 @@
 - GitHub Actions signals (`21579321573` historical failure root-caused; latest runs green)
 
 ## Candidate Features To Do
+### Selected (Cycle 2 session)
+- [ ] P1: Harden upload validation (server-side MIME sniff + image format allowlist) and return structured error codes for better UX (UI should render the message).
+- [ ] P1: Preset bundle import validation + conflict handling UX (offer “overwrite existing” vs “keep both (rename)” and show a summary toast).
+- [ ] P2: Add Docker `HEALTHCHECK` for `/api/health` (keep dev behavior unchanged).
+
+### Backlog
 - [ ] P2: Face-guided crop framing (prefer lightweight / optional dependency); fall back to `top_bias` when unavailable.
-- [ ] P2: Harden upload validation (server-side MIME sniff + image format allowlist) and return structured error codes for better UX.
 - [ ] P2: Add batch CLI helper (process a folder to outputs/ + optional ZIP) for non-UI workflows.
-- [ ] P3: Add Docker `HEALTHCHECK` and set container-friendly default host binding (keep dev behavior unchanged).
 - [ ] P3: Add visual regression smoke script for `static/` workflow interactions (optional, fast, and deterministic).
 - [ ] P3: Add perf micro-benchmark for processing pipeline (guardrail against slow regressions).
-- [ ] P3: Add optional “keep original background” toggle for batch mode (parity with batch tooling expectations).
 - [ ] P3: Add “profile suggestions” (auto-name saved profiles based on use-case/preset/style) to reduce friction.
+- [ ] P3: Add batch “continue on error” mode (returns a ZIP including `errors.json` instead of failing the entire batch).
 
 ## Implemented
 - [2026-02-09] Batch processing MVP (multi-upload to server-side ZIP download).
@@ -55,6 +59,7 @@
 - GitHub Actions annotations can surface near-term maintenance debt before it becomes a failing check.
 - Market baseline: batch workflows commonly export a single ZIP and let users choose output format and folder name; “keep original background” is a common batch toggle.
 - Market baseline: common web tools cap image size (example: Canva Background Remover works under ~9MB and downscales to 10MP).
+- Market baseline sources (untrusted): PhotoRoom batch format options + naming (`https://help.photoroom.com/en/articles/12137322-edit-multiple-photos-with-the-batch-feature-web-app`), PhotoRoom “original background” template (`https://help.photoroom.com/en/articles/12818584-keep-the-original-background-when-using-the-batch-feature`), remove.bg upload limits (`https://www.remove.bg/it/help/a/what-is-the-maximum-image-resolution-file-size`), Canva background remover limits (`https://www.canva.com/learn/background-remover/`).
 
 ## Notes
 - This file is maintained by the autonomous clone loop.
