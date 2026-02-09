@@ -12,6 +12,8 @@ from ai_headshot_studio.presets import PRESETS, STYLES
 MAX_UPLOAD_MB = 12
 MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 MAX_PIXELS = 20_000_000
+_ALPHA_THRESHOLD = 8
+_ALPHA_TABLE = [0 if i <= _ALPHA_THRESHOLD else 255 for i in range(256)]
 
 
 class ProcessingError(ValueError):
@@ -149,20 +151,79 @@ def apply_adjustments(image: Image.Image, req: ProcessRequest) -> Image.Image:
 
 
 def crop_to_aspect(image: Image.Image, ratio: float, top_bias: float = 0.2) -> Image.Image:
+    return crop_to_aspect_focus(image, ratio=ratio, top_bias=top_bias, focus_bbox=None)
+
+
+def alpha_foreground_bbox(image: Image.Image) -> tuple[int, int, int, int] | None:
+    """Best-effort foreground bounds from alpha channel (when present).
+
+    This is a lightweight framing helper that works well for transparent PNGs and
+    background-removed outputs. It is intentionally conservative: if alpha is
+    missing or empty, returns None.
+    """
+
+    if "A" not in image.getbands():
+        return None
+    alpha = image.getchannel("A")
+    # Reduce faint edge noise by thresholding alpha before bbox.
+    mask = alpha.point(_ALPHA_TABLE)
+    bbox = mask.getbbox()
+    if not bbox:
+        return None
+    left, top, right, bottom = bbox
+    if right <= left or bottom <= top:
+        return None
+    # Ignore tiny specks (e.g., compression artifacts) so we don't bias framing.
+    bbox_area = (right - left) * (bottom - top)
+    if bbox_area < int(image.width * image.height * 0.01):
+        return None
+    return bbox
+
+
+def crop_to_aspect_focus(
+    image: Image.Image,
+    *,
+    ratio: float,
+    top_bias: float = 0.2,
+    focus_bbox: tuple[int, int, int, int] | None,
+) -> Image.Image:
     width, height = image.size
     current_ratio = width / height
 
     if abs(current_ratio - ratio) < 0.001:
         return image
 
+    focus_x = None
+    focus_y = None
+    if focus_bbox is not None:
+        left, top, right, bottom = focus_bbox
+        focus_x = (left + right) / 2.0
+        # Bias toward the upper part of the subject bbox (closer to face/eyes).
+        focus_y = top + (bottom - top) * 0.30
+
     if current_ratio > ratio:
         new_width = int(height * ratio)
-        left = (width - new_width) // 2
+        max_shift = width - new_width
+        if focus_x is None:
+            left = max_shift // 2
+        else:
+            left = int(round(focus_x - new_width / 2.0))
+            left = max(0, min(left, max_shift))
         box = (left, 0, left + new_width, height)
     else:
         new_height = int(width / ratio)
         max_shift = height - new_height
-        shift = int(max_shift * max(0.0, min(top_bias, 1.0)))
+        if focus_y is None:
+            shift = int(max_shift * max(0.0, min(top_bias, 1.0)))
+        else:
+            # `top_bias` is a simple shift control when we don't have focus.
+            # When focus is available, interpret it as a framing preference:
+            # lower values => more headroom (focus lower in the crop).
+            headroom = 1.0 - max(0.0, min(top_bias, 1.0))
+            target_ratio = 0.30 + (headroom * 0.20)  # 0.30..0.50
+            target_y = new_height * target_ratio
+            shift = int(round(focus_y - target_y))
+            shift = max(0, min(shift, max_shift))
         box = (0, shift, width, shift + new_height)
     return image.crop(box)
 
@@ -265,13 +326,15 @@ def process_image(data: bytes, req: ProcessRequest) -> Image.Image:
     if req.remove_bg:
         image = remove_background(image)
 
+    focus_bbox = alpha_foreground_bbox(image)
+
     if req.remove_bg or req.background != "transparent":
         image = apply_background(to_rgba(image), req.background, req.background_hex)
 
     image = apply_adjustments(image, req)
 
     ratio, width, height = ensure_preset(req.preset)
-    image = crop_to_aspect(image, ratio=ratio, top_bias=req.top_bias)
+    image = crop_to_aspect_focus(image, ratio=ratio, top_bias=req.top_bias, focus_bbox=focus_bbox)
     image = resize_if_needed(image, width=width, height=height)
     return image
 

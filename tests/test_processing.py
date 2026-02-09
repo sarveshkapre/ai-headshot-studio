@@ -9,8 +9,10 @@ from ai_headshot_studio.app import build_output_headers
 from ai_headshot_studio.processing import (
     ProcessingError,
     ProcessRequest,
+    alpha_foreground_bbox,
     available_styles,
     crop_to_aspect,
+    crop_to_aspect_focus,
     load_image,
     process_image,
     to_bytes,
@@ -161,6 +163,30 @@ def test_crop_to_aspect_top_bias_changes_vertical_crop() -> None:
     assert bottom.size == (100, 100)
     assert top.getpixel((10, 10)) == (255, 0, 0)
     assert bottom.getpixel((10, 10)) == (0, 0, 255)
+
+
+def test_crop_to_aspect_focus_bbox_keeps_foreground_in_frame() -> None:
+    image = Image.new("RGBA", (200, 400), (0, 0, 0, 0))
+    for y in range(250, 400):
+        for x in range(0, 200):
+            image.putpixel((x, y), (255, 0, 0, 255))
+
+    # Default crop (using only `top_bias`) misses the foreground rectangle.
+    cropped_default = crop_to_aspect(image, ratio=1.0, top_bias=0.2)
+    assert cropped_default.getchannel("A").getbbox() is None
+
+    focus_bbox = (0, 250, 200, 400)
+    cropped_focus = crop_to_aspect_focus(image, ratio=1.0, top_bias=0.2, focus_bbox=focus_bbox)
+    assert cropped_focus.getchannel("A").getbbox() is not None
+
+
+def test_alpha_foreground_bbox_detects_non_empty_alpha() -> None:
+    image = Image.new("RGBA", (120, 120), (0, 0, 0, 0))
+    for y in range(30, 90):
+        for x in range(40, 80):
+            image.putpixel((x, y), (255, 255, 255, 255))
+    bbox = alpha_foreground_bbox(image)
+    assert bbox is not None
 
 
 def test_load_image_applies_exif_orientation() -> None:
