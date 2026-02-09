@@ -574,6 +574,66 @@ input[type="range"] {
   font-size: 0.8rem;
 }
 
+.estimate-meta {
+  margin: -2px 0 4px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.status-pill--pending {
+  background: rgba(110, 231, 249, 0.14);
+  color: var(--accent-2);
+}
+
+.status-pill--ok {
+  background: rgba(86, 244, 178, 0.16);
+  color: #72f2c8;
+}
+
+.status-pill--error {
+  background: rgba(255, 128, 139, 0.16);
+  color: #ff9ea8;
+}
+
+.diagnostics-summary {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+
+.diagnostics-list {
+  display: grid;
+  gap: 8px;
+}
+
+.diagnostics-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-soft);
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.diagnostics-row strong {
+  color: var(--text);
+  font-size: 0.83rem;
+}
+
 .footer {
   padding: 24px 8vw 40px;
   color: var(--muted);

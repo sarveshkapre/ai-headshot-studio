@@ -144,6 +144,8 @@
             <label for="jpegQuality">JPEG quality <span id="jpegQualityValue">92</span></label>
             <input id="jpegQuality" type="range" min="60" max="100" step="1" value="92" />
           </div>
+          <div id="estimateMeta" class="estimate-meta" aria-live="polite">Estimated output: --</div>
+          <small class="hint">Estimate is approximate and updates before processing.</small>
           <div class="toggle-row">
             <label class="switch">
               <input id="autoUpdate" type="checkbox" checked />
@@ -227,6 +229,28 @@
           <div class="card__title">Recent exports</div>
           <div id="historyList" class="history-list">
             <div class="history-empty">No exports yet.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__title-row">
+            <div class="card__title">System diagnostics</div>
+            <span id="healthBadge" class="status-pill status-pill--pending">Checking</span>
+          </div>
+          <div id="healthSummary" class="diagnostics-summary">Loading local API status...</div>
+          <div class="diagnostics-list">
+            <div class="diagnostics-row">
+              <span>API health</span>
+              <strong id="diagApi">Unknown</strong>
+            </div>
+            <div class="diagnostics-row">
+              <span>Background removal</span>
+              <strong id="diagRembg">Unknown</strong>
+            </div>
+            <div class="diagnostics-row">
+              <span>Upload limit</span>
+              <strong id="diagUploadLimit">--</strong>
+            </div>
           </div>
         </div>
 

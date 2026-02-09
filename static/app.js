@@ -8,10 +8,13 @@ const state = {
   processedUrl: null,
   toastTimer: null,
   saveTimer: null,
+  estimateTimer: null,
+  estimateRequestId: 0,
   saved: null,
   history: [],
   useCase: null,
   isApplyingUseCase: false,
+  presets: {},
 };
 
 const elements = {
@@ -57,6 +60,12 @@ const elements = {
   toastMessage: document.getElementById("toastMessage"),
   toastDismiss: document.getElementById("toastDismiss"),
   backgroundSwatch: document.getElementById("backgroundSwatch"),
+  estimateMeta: document.getElementById("estimateMeta"),
+  healthBadge: document.getElementById("healthBadge"),
+  healthSummary: document.getElementById("healthSummary"),
+  diagApi: document.getElementById("diagApi"),
+  diagRembg: document.getElementById("diagRembg"),
+  diagUploadLimit: document.getElementById("diagUploadLimit"),
   sliders: {
     brightness: document.getElementById("brightness"),
     contrast: document.getElementById("contrast"),
@@ -255,6 +264,16 @@ function hideToast() {
   elements.toastMessage.textContent = "";
 }
 
+function setEstimateMeta(text) {
+  elements.estimateMeta.textContent = `Estimated output: ${text}`;
+}
+
+function setHealthBadge(stateKey, text) {
+  elements.healthBadge.classList.remove("status-pill--pending", "status-pill--ok", "status-pill--error");
+  elements.healthBadge.classList.add(`status-pill--${stateKey}`);
+  elements.healthBadge.textContent = text;
+}
+
 function updateSliderValues() {
   Object.keys(elements.sliders).forEach((key) => {
     elements.sliderValues[key].textContent = Number(elements.sliders[key].value).toFixed(2);
@@ -369,6 +388,148 @@ function clampNumber(value, min, max, fallback) {
     return fallback;
   }
   return Math.max(min, Math.min(max, numeric));
+}
+
+function getPresetForEstimate() {
+  return state.presets[elements.preset.value] ?? null;
+}
+
+function computeCropRegion(width, height, ratio, topBias) {
+  let sourceX = 0;
+  let sourceY = 0;
+  let sourceWidth = width;
+  let sourceHeight = height;
+
+  if (!Number.isFinite(ratio) || ratio <= 0) {
+    return { sourceX, sourceY, sourceWidth, sourceHeight };
+  }
+
+  const currentRatio = width / height;
+  if (Math.abs(currentRatio - ratio) < 0.001) {
+    return { sourceX, sourceY, sourceWidth, sourceHeight };
+  }
+
+  if (currentRatio > ratio) {
+    sourceWidth = Math.max(1, Math.floor(height * ratio));
+    sourceX = Math.floor((width - sourceWidth) / 2);
+  } else {
+    sourceHeight = Math.max(1, Math.floor(width / ratio));
+    const maxShift = height - sourceHeight;
+    const shift = Math.floor(maxShift * clampNumber(topBias, 0, 1, 0.2));
+    sourceY = Math.max(0, Math.min(maxShift, shift));
+  }
+
+  return { sourceX, sourceY, sourceWidth, sourceHeight };
+}
+
+function estimateOutputGeometry() {
+  const preview = elements.originalPreview;
+  if (!preview || !preview.naturalWidth || !preview.naturalHeight) {
+    return null;
+  }
+
+  const preset = getPresetForEstimate();
+  if (!preset) {
+    return null;
+  }
+
+  const crop = computeCropRegion(
+    preview.naturalWidth,
+    preview.naturalHeight,
+    Number(preset.ratio),
+    Number(elements.cropSliders.topBias.value),
+  );
+  const explicitWidth = Number(preset.width);
+  const explicitHeight = Number(preset.height);
+  const outputWidth =
+    Number.isFinite(explicitWidth) && explicitWidth > 0
+      ? Math.round(explicitWidth)
+      : Math.max(1, Math.round(crop.sourceWidth));
+  const outputHeight =
+    Number.isFinite(explicitHeight) && explicitHeight > 0
+      ? Math.round(explicitHeight)
+      : Math.max(1, Math.round(crop.sourceHeight));
+
+  return { ...crop, outputWidth, outputHeight };
+}
+
+function canvasToBlob(canvas, format, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+        reject(new Error("estimate-failed"));
+      },
+      format,
+      quality,
+    );
+  });
+}
+
+async function runEstimate(requestId) {
+  if (!state.file) {
+    setEstimateMeta("--");
+    return;
+  }
+
+  const geometry = estimateOutputGeometry();
+  if (!geometry) {
+    setEstimateMeta("Loading...");
+    return;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = geometry.outputWidth;
+  canvas.height = geometry.outputHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    setEstimateMeta("Unavailable");
+    return;
+  }
+  ctx.drawImage(
+    elements.originalPreview,
+    geometry.sourceX,
+    geometry.sourceY,
+    geometry.sourceWidth,
+    geometry.sourceHeight,
+    0,
+    0,
+    geometry.outputWidth,
+    geometry.outputHeight,
+  );
+
+  const format = elements.format.value === "jpeg" ? "image/jpeg" : "image/png";
+  const quality = clampNumber(Number(elements.exportSliders.jpegQuality.value), 60, 100, 92) / 100;
+
+  try {
+    const blob = await canvasToBlob(canvas, format, quality);
+    if (requestId !== state.estimateRequestId) return;
+    const sizeLabel = formatBytes(blob.size);
+    const sizeFragment = sizeLabel ? ` ~${sizeLabel}` : "";
+    setEstimateMeta(`${geometry.outputWidth}×${geometry.outputHeight}${sizeFragment}`);
+  } catch {
+    if (requestId !== state.estimateRequestId) return;
+    setEstimateMeta(`${geometry.outputWidth}×${geometry.outputHeight}`);
+  }
+}
+
+function queueEstimate() {
+  if (!state.file) {
+    setEstimateMeta("--");
+    return;
+  }
+  if (state.estimateTimer) {
+    clearTimeout(state.estimateTimer);
+  }
+  state.estimateTimer = setTimeout(() => {
+    state.estimateTimer = null;
+    state.estimateRequestId += 1;
+    const requestId = state.estimateRequestId;
+    runEstimate(requestId);
+  }, 200);
 }
 
 function normalizeSliderValues(rawValues) {
@@ -614,7 +775,9 @@ async function loadPresets() {
   }
 
   elements.preset.innerHTML = "";
+  state.presets = {};
   data.presets.forEach((preset) => {
+    state.presets[preset.key] = preset;
     const option = document.createElement("option");
     option.value = preset.key;
     option.textContent = preset.name;
@@ -644,6 +807,7 @@ async function loadPresets() {
   updateBackgroundCustomVisibility();
   updateSliderValues();
   setUseCaseSelection(state.useCase);
+  queueEstimate();
 }
 
 function setFile(file) {
@@ -683,6 +847,7 @@ function setFile(file) {
     const img = new Image();
     img.onload = () => {
       elements.originalMeta.textContent = `${img.naturalWidth}×${img.naturalHeight}`;
+      queueEstimate();
     };
     img.src = reader.result;
   };
@@ -790,6 +955,7 @@ function updateBackgroundSwatch() {
 }
 
 function queueProcess(force = false) {
+  queueEstimate();
   if (!state.file) return;
   if (!elements.autoUpdate.checked && !force) return;
   if (state.debounce) {
@@ -798,6 +964,41 @@ function queueProcess(force = false) {
   state.debounce = setTimeout(() => {
     processImage();
   }, 300);
+}
+
+async function loadHealthDiagnostics() {
+  setHealthBadge("pending", "Checking");
+  elements.healthSummary.textContent = "Loading local API status...";
+  elements.diagApi.textContent = "Unknown";
+  elements.diagRembg.textContent = "Unknown";
+  elements.diagUploadLimit.textContent = "--";
+
+  try {
+    const response = await fetch("/api/health");
+    if (!response.ok) {
+      throw new Error("health-failed");
+    }
+    const data = await response.json();
+    const apiOk = data?.status === "ok";
+    const rembg = data?.features?.background_removal;
+    const rembgAvailable = Boolean(rembg?.available);
+    const version = typeof data?.version === "string" ? data.version : "unknown";
+    const uploadMb = Number(data?.limits?.max_upload_mb);
+
+    setHealthBadge(apiOk ? "ok" : "error", apiOk ? "Healthy" : "Degraded");
+    elements.diagApi.textContent = apiOk ? "OK" : "Unavailable";
+    elements.diagRembg.textContent = rembgAvailable ? "Ready" : "Unavailable";
+    elements.diagUploadLimit.textContent =
+      Number.isFinite(uploadMb) && uploadMb > 0 ? `${uploadMb}MB` : "--";
+    elements.healthSummary.textContent = `v${version} running locally.`;
+  } catch {
+    setHealthBadge("error", "Offline");
+    elements.diagApi.textContent = "Unreachable";
+    elements.diagRembg.textContent = "Unknown";
+    elements.diagUploadLimit.textContent = "--";
+    elements.healthSummary.textContent =
+      "Could not reach /api/health. Start the server and refresh this page.";
+  }
 }
 
 function formDataFromState() {
@@ -1081,6 +1282,8 @@ function bindEvents() {
       state.processedUrl = null;
       elements.processedPreview.removeAttribute("src");
     }
+    state.file = null;
+    elements.fileInput.value = "";
     elements.removeBg.checked = false;
     elements.background.value = "white";
     elements.backgroundHex.value = "#ffffff";
@@ -1096,6 +1299,13 @@ function bindEvents() {
     updateBackgroundSwatch();
     setZoomMode("fit");
     setGuideMode("off");
+    elements.originalPreview.removeAttribute("src");
+    elements.compareOriginal.removeAttribute("src");
+    elements.originalMeta.textContent = "";
+    elements.processedMeta.textContent = "";
+    elements.originalEmpty.hidden = false;
+    elements.processedEmpty.hidden = false;
+    setEstimateMeta("--");
     showToast("Studio reset.");
   });
   elements.resetCropExport.addEventListener("click", () => {
@@ -1206,8 +1416,10 @@ state.saved = readSettings();
 applySavedSettings();
 updateBackgroundCustomVisibility();
 updateBackgroundSwatch();
+setEstimateMeta("--");
 elements.exportSliders.jpegQuality.disabled = elements.format.value !== "jpeg";
 setZoomMode(readZoomMode());
 setGuideMode(readGuideMode());
+loadHealthDiagnostics();
 loadPresets();
 bindEvents();

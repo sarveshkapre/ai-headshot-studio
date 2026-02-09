@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import time
+from functools import lru_cache
+from importlib import metadata, util
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -9,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
 from ai_headshot_studio.processing import (
+    MAX_PIXELS,
     MAX_UPLOAD_BYTES,
     MAX_UPLOAD_MB,
     ProcessingError,
@@ -62,8 +65,46 @@ async def index() -> FileResponse:
 
 
 @app.get("/api/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+async def health() -> dict[str, object]:
+    return {
+        "status": "ok",
+        "service": "ai-headshot-studio",
+        "version": package_version(),
+        "limits": {
+            "max_upload_mb": MAX_UPLOAD_MB,
+            "max_upload_bytes": MAX_UPLOAD_BYTES,
+            "max_pixels": MAX_PIXELS,
+        },
+        "features": {
+            "background_removal": background_removal_diagnostics(),
+        },
+    }
+
+
+@lru_cache(maxsize=1)
+def package_version() -> str:
+    try:
+        return metadata.version("ai-headshot-studio")
+    except metadata.PackageNotFoundError:
+        return app.version
+
+
+@lru_cache(maxsize=1)
+def background_removal_diagnostics() -> dict[str, str | bool]:
+    details: dict[str, str | bool] = {
+        "mode": "local",
+        "provider": "rembg",
+        "available": False,
+    }
+    if util.find_spec("rembg") is None:
+        details["error"] = "missing_dependency"
+        return details
+    details["available"] = True
+    try:
+        details["version"] = metadata.version("rembg")
+    except metadata.PackageNotFoundError:
+        details["version"] = "unknown"
+    return details
 
 
 @app.get("/api/presets")
