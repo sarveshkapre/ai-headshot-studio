@@ -17,10 +17,12 @@
 - Batch total upload size cap (sum of bytes across uploaded images) to keep memory bounded.
 - Saved profiles library (named profiles) plus export/import preset bundles (JSON).
 - Headroom control (crop top-bias) for smarter framing.
+- Optional face-guided crop framing when OpenCV is installed.
 - Preview zoom toggle (fit vs actual size).
 - Background swatch preview next to backdrop selector.
 - Before/after comparison slider in the processed preview.
 - JPEG quality control for exports.
+- WebP output support (with feature detection when encoder is unavailable).
 - Output size metadata (bytes) in preview.
 - Clipboard paste upload support.
 - One-click background reset.
@@ -32,6 +34,7 @@
 - Pre-process export estimate in the UI (predicted output dimensions + approximate size).
 - API contract coverage for `/api/health`, `/api/presets`, and `/api/process`.
 - `make smoke` target for local end-to-end health/process verification.
+- Batch CLI helper (`scripts/batch_cli.py`) for processing folders outside the UI.
 
 ### Changed
 - Images are auto-oriented using EXIF metadata so previews/crops match how the photo was taken.

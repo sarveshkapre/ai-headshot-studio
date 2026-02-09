@@ -99,10 +99,13 @@ def test_process_rejects_unsupported_format() -> None:
             "format": "webp",
         },
     )
-    assert response.status_code == 400
-    detail = response.json()["detail"]
-    assert detail["code"] == "unsupported_output_format"
-    assert detail["message"] == "Unsupported output format."
+    if response.status_code == 200:
+        assert response.headers["content-type"].startswith("image/webp")
+        assert response.headers["x-output-format"] == "webp"
+    else:
+        assert response.status_code == 400
+        detail = response.json()["detail"]
+        assert detail["code"] in {"webp_unavailable", "unsupported_output_format"}
 
 
 def test_process_rejects_invalid_image_bytes() -> None:

@@ -43,7 +43,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--sharpness", type=float, default=1.0)
     parser.add_argument("--soften", type=float, default=0.0)
     parser.add_argument("--jpeg-quality", type=int, default=92)
-    parser.add_argument("--format", default="png", help="png|jpeg")
+    parser.add_argument("--format", default="png", help="png|jpeg|webp")
     return parser.parse_args(argv)
 
 

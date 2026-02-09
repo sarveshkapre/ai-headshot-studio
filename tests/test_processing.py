@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 
 import pytest
-from PIL import Image
+from PIL import Image, features
 
 from ai_headshot_studio.app import build_output_headers
 from ai_headshot_studio.processing import (
@@ -271,4 +271,16 @@ def test_build_output_headers() -> None:
 def test_to_bytes_rejects_unsupported_output_format() -> None:
     image = Image.new("RGB", (32, 32), (0, 0, 0))
     with pytest.raises(ProcessingError):
-        to_bytes(image, "webp")
+        to_bytes(image, "gif")
+
+
+def test_to_bytes_webp_is_feature_detected() -> None:
+    image = Image.new("RGB", (32, 32), (0, 0, 0))
+    if not features.check("webp"):
+        with pytest.raises(ProcessingError) as exc:
+            to_bytes(image, "webp")
+        assert exc.value.code == "webp_unavailable"
+        return
+    payload = to_bytes(image, "webp")
+    # WebP containers are RIFF.
+    assert payload.startswith(b"RIFF")

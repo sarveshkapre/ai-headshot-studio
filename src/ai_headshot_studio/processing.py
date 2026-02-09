@@ -141,7 +141,7 @@ def apply_background(
 
 def normalize_output_format(value: str) -> str:
     fmt = value.strip().lower()
-    if fmt not in {"png", "jpeg"}:
+    if fmt not in {"png", "jpeg", "webp"}:
         raise ProcessingError("Unsupported output format.", code="unsupported_output_format")
     return fmt
 
@@ -445,7 +445,7 @@ def process_image(data: bytes, req: ProcessRequest) -> Image.Image:
 def to_bytes(image: Image.Image, output_format: str, jpeg_quality: int = 92) -> bytes:
     buffer = io.BytesIO()
     fmt = output_format.lower()
-    if fmt not in {"png", "jpeg"}:
+    if fmt not in {"png", "jpeg", "webp"}:
         raise ProcessingError("Unsupported output format.", code="unsupported_output_format")
     if fmt == "jpeg":
         if image.mode in {"RGBA", "LA"}:
@@ -455,6 +455,22 @@ def to_bytes(image: Image.Image, output_format: str, jpeg_quality: int = 92) -> 
         else:
             image = image.convert("RGB")
         image.save(buffer, format="JPEG", quality=jpeg_quality, optimize=True)
+    elif fmt == "webp":
+        from collections.abc import Callable
+        from typing import cast
+
+        try:
+            from PIL import features
+        except Exception as exc:
+            raise ProcessingError("WebP encoder unavailable.", code="webp_unavailable") from exc
+
+        check = cast(Callable[[str], bool], getattr(features, "check", lambda _key: False))
+        if not bool(check("webp")):
+            raise ProcessingError("WebP encoder unavailable.", code="webp_unavailable")
+        try:
+            image.save(buffer, format="WEBP", quality=jpeg_quality, method=6)
+        except Exception as exc:  # pragma: no cover - encoder availability varies by build
+            raise ProcessingError("WebP encoder unavailable.", code="webp_unavailable") from exc
     else:
         image.save(buffer, format="PNG", optimize=True)
     return buffer.getvalue()

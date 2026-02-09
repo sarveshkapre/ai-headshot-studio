@@ -303,7 +303,8 @@ function suggestProfileName() {
   }
   const preset = state.presets[elements.preset.value];
   const presetName = typeof preset?.name === "string" ? preset.name : "";
-  const fmt = elements.format.value === "jpeg" ? "JPEG" : "PNG";
+  const fmtMap = { png: "PNG", jpeg: "JPEG", webp: "WebP" };
+  const fmt = fmtMap[elements.format.value] || String(elements.format.value || "").toUpperCase();
   if (presetName) return `${presetName} · ${fmt}`;
   return `Profile ${state.profiles.length + 1}`;
 }
@@ -671,8 +672,12 @@ async function runEstimate(requestId) {
     geometry.outputHeight,
   );
 
-  const format = elements.format.value === "jpeg" ? "image/jpeg" : "image/png";
-  const quality = clampNumber(Number(elements.exportSliders.jpegQuality.value), 60, 100, 92) / 100;
+  const formatMap = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
+  const format = formatMap[elements.format.value] || "image/png";
+  const qualityEnabled = elements.format.value === "jpeg" || elements.format.value === "webp";
+  const quality = qualityEnabled
+    ? clampNumber(Number(elements.exportSliders.jpegQuality.value), 60, 100, 92) / 100
+    : 1.0;
 
   try {
     const blob = await canvasToBlob(canvas, format, quality);
@@ -760,7 +765,7 @@ function sanitizeImportedSettings(settings) {
 
   sanitized.topBias = clampNumber(settings.topBias, 0, 1, 0.2);
 
-  if (settings.format === "png" || settings.format === "jpeg") {
+  if (settings.format === "png" || settings.format === "jpeg" || settings.format === "webp") {
     sanitized.format = settings.format;
   }
   sanitized.jpegQuality = Math.round(clampNumber(settings.jpegQuality, 60, 100, 92));
@@ -945,7 +950,7 @@ function applyImportedPresetSettings(settings) {
     clampNumber(settings.topBias, 0, 1, Number(elements.cropSliders.topBias.value)),
   );
 
-  if (settings.format === "png" || settings.format === "jpeg") {
+  if (settings.format === "png" || settings.format === "jpeg" || settings.format === "webp") {
     elements.format.value = settings.format;
   }
   elements.exportSliders.jpegQuality.value = String(
@@ -989,7 +994,8 @@ function applyImportedPresetSettings(settings) {
   updateBackgroundCustomVisibility();
   updateBackgroundSwatch();
   updateSliderValues();
-  elements.exportSliders.jpegQuality.disabled = elements.format.value !== "jpeg";
+  elements.exportSliders.jpegQuality.disabled =
+    elements.format.value !== "jpeg" && elements.format.value !== "webp";
   queueProcess(true);
   scheduleSaveSettings();
 }
@@ -1071,7 +1077,8 @@ function applyUseCase(useCaseKey) {
   elements.cropSliders.topBias.value = String(preset.topBias);
   elements.format.value = preset.format;
   elements.exportSliders.jpegQuality.value = String(preset.jpegQuality);
-  elements.exportSliders.jpegQuality.disabled = preset.format !== "jpeg";
+  elements.exportSliders.jpegQuality.disabled =
+    preset.format !== "jpeg" && preset.format !== "webp";
   elements.autoUpdate.checked = true;
   enforceCompatibleOptions();
   updateBackgroundCustomVisibility();
@@ -1780,7 +1787,7 @@ function bindEvents() {
     slider.addEventListener("input", () => {
       updateSliderValues();
       maybeClearUseCase();
-      if (elements.format.value === "jpeg") {
+      if (elements.format.value === "jpeg" || elements.format.value === "webp") {
         queueProcess();
       }
       scheduleSaveSettings();
@@ -1816,7 +1823,8 @@ function bindEvents() {
     enforceCompatibleOptions();
     maybeClearUseCase();
     queueProcess();
-    elements.exportSliders.jpegQuality.disabled = elements.format.value !== "jpeg";
+    elements.exportSliders.jpegQuality.disabled =
+      elements.format.value !== "jpeg" && elements.format.value !== "webp";
     scheduleSaveSettings();
   });
   elements.autoUpdate.addEventListener("change", () => {
@@ -2060,7 +2068,8 @@ updateBatchLimitsHint();
 updateBatchSummary();
 renderBatchList();
 setBatchLoading(false);
-elements.exportSliders.jpegQuality.disabled = elements.format.value !== "jpeg";
+elements.exportSliders.jpegQuality.disabled =
+  elements.format.value !== "jpeg" && elements.format.value !== "webp";
 setZoomMode(readZoomMode());
 setGuideMode(readGuideMode());
 loadHealthDiagnostics();

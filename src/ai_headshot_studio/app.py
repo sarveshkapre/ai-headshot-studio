@@ -256,7 +256,12 @@ async def process(
             detail=api_detail(exc.code, str(exc)),
         ) from exc
 
-    media_type = "image/png" if output_format == "png" else "image/jpeg"
+    media_type_map = {
+        "png": "image/png",
+        "jpeg": "image/jpeg",
+        "webp": "image/webp",
+    }
+    media_type = media_type_map.get(output_format, "application/octet-stream")
     elapsed_ms = int((time.perf_counter() - start) * 1000)
     return StreamingResponse(
         iter([payload]),
@@ -374,7 +379,8 @@ async def batch(
                         ),
                     ) from exc
 
-                ext = "png" if output_format == "png" else "jpg"
+                ext_map = {"png": "png", "jpeg": "jpg", "webp": "webp"}
+                ext = ext_map.get(output_format, "bin")
                 stem = Path(filename).stem
                 out_name = f"{idx:02d}-{stem}.{ext}"
                 if zip_folder:
