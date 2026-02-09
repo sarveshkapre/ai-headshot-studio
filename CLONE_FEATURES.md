@@ -9,10 +9,17 @@
 - GitHub Actions signals (`21579321573` historical failure root-caused; latest runs green)
 
 ## Candidate Features To Do
+### Selected (Cycle 4)
+- [ ] P1: Fix `top_bias` semantics to match docs/UI (“Headroom”: higher value should yield more headroom) and update tests.
+- [ ] P1: Add subject-guided crop framing using alpha-mask foreground bounds when available (works for transparent PNGs and `remove_bg` output) with safe fallback to `top_bias`.
+- [ ] P1: Harden image decoding against decompression-bomb style inputs by rejecting over-`MAX_PIXELS` images before full decode; add regression tests.
+- [ ] P4: Normalize `CHANGELOG.md` bullet indentation (avoid malformed nested bullets in “Added”).
+
 ### Backlog
-- [ ] P2: Face-guided crop framing (prefer lightweight / optional dependency); fall back to `top_bias` when unavailable.
-- [ ] P2: Add batch CLI helper (process a folder to outputs/ + optional ZIP) for non-UI workflows.
-- [ ] P3: Add visual regression smoke script for `static/` workflow interactions (optional, fast, and deterministic).
+- [ ] P2: Face-guided crop framing (prefer lightweight / optional dependency) to improve framing when alpha masks are not available.
+- [ ] P2: Add batch CLI helper (process a folder to `outputs/` + optional ZIP) for non-UI workflows.
+- [ ] P3: Add WebP output option with feature detection (error clearly when encoder is unavailable).
+- [ ] P3: Add visual regression smoke script for `static/` workflow interactions (optional, fast, deterministic).
 - [ ] P3: Add perf micro-benchmark for processing pipeline (guardrail against slow regressions).
 - [ ] P3: Add “profile suggestions” (auto-name saved profiles based on use-case/preset/style) to reduce friction.
 

@@ -45,7 +45,7 @@ docker run --rm -p 8000:8000 ai-headshot-studio
 - `background_hex` (optional `#RRGGBB` or `#RGB` when `background=custom`)
 - `preset` (see `/api/presets`)
 - `style` (optional style name)
-- `top_bias` (0–1, higher = more headroom; default 0.2)
+- `top_bias` (0–1, lower = more headroom; default 0.2)
 - `brightness` (0.5–1.5)
 - `contrast` (0.5–1.5)
 - `color` (0.5–1.5)

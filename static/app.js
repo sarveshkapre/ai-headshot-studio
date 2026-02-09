@@ -441,7 +441,14 @@ function updateSliderValues() {
     elements.sliderValues[key].textContent = Number(elements.sliders[key].value).toFixed(2);
   });
   Object.keys(elements.cropSliders).forEach((key) => {
-    elements.cropSliderValues[key].textContent = Number(elements.cropSliders[key].value).toFixed(2);
+    const raw = Number(elements.cropSliders[key].value);
+    if (key === "topBias") {
+      // UI calls this “Headroom”: higher means more headroom. Server uses `top_bias`
+      // where lower means more headroom, so we display the inverted value.
+      elements.cropSliderValues[key].textContent = (1 - raw).toFixed(2);
+      return;
+    }
+    elements.cropSliderValues[key].textContent = raw.toFixed(2);
   });
   Object.keys(elements.exportSliders).forEach((key) => {
     elements.exportSliderValues[key].textContent = String(
