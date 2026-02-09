@@ -27,6 +27,8 @@
   - Evidence: `scripts/smoke_api.sh`, `Makefile` (`make smoke`).
 - [2026-02-09] Structured project memory + incident log.
   - Evidence: `PROJECT_MEMORY.md`, `INCIDENTS.md` (decision records, failure RCA, prevention rules).
+- [2026-02-09] Future-proofed CodeQL workflow action version.
+  - Evidence: `.github/workflows/codeql.yml` (`github/codeql-action/*` moved from `@v3` to `@v4`).
 - [2026-02-08] CI-safe Make targets and command fallback.
   - Evidence: `Makefile` (uses active Python when `.venv` is absent), `make -n check VENV=.ci-missing`.
 - [2026-02-08] Preset export/import in the web studio.
@@ -42,6 +44,7 @@
 - Preset portability is low-friction when JSON payloads include both style key and explicit slider values.
 - Health diagnostics should avoid importing `rembg` directly: `rembg` can call `sys.exit(1)` when ONNX runtime support is missing.
 - A dedicated smoke command (`make smoke`) catches startup/runtime regressions earlier than unit tests alone.
+- GitHub Actions annotations can surface near-term maintenance debt before it becomes a failing check.
 
 ## Notes
 - This file is maintained by the autonomous clone loop.

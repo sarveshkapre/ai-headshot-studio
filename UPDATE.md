@@ -6,6 +6,7 @@
 - Added a pre-process export estimator in the studio UI (predicted output dimensions and approximate size).
 - Added endpoint contract tests for `health`, `presets`, and `process` paths.
 - Added a reusable local smoke command (`make smoke`) that verifies health + image processing end-to-end.
+- Upgraded `.github/workflows/codeql.yml` to `github/codeql-action@v4` after deprecation warning on `@v3`.
 
 ## Verification
 Commands run:

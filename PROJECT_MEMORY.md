@@ -37,3 +37,15 @@
 - Trust label: `verified-local`.
 - Follow-ups:
   - Add optional CI job for smoke verification after dependency install time is optimized.
+
+### 2026-02-09 | Upgrade CodeQL GitHub Action to v4
+- Decision: Move `.github/workflows/codeql.yml` from `github/codeql-action@v3` to `@v4`.
+- Why: CI annotation reported v3 deprecation in December 2026; upgrading now avoids deadline-driven maintenance risk.
+- Evidence:
+  - CI annotation on run `21810971222`.
+  - Code: `.github/workflows/codeql.yml`.
+- Commit: pending (this run).
+- Confidence: High.
+- Trust label: `ci-verified`.
+- Follow-ups:
+  - Re-check all automation repos for remaining `codeql-action@v3` usage.
