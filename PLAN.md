@@ -50,5 +50,5 @@ More: see `docs/PROJECT.md`.
 
 ## Next to ship
 - Face-guided crop framing (lightweight detector).
-- Batch mode for multiple images.
-- Preset bundles (share multiple named profiles).
+- Add batch CLI helper (process a folder to outputs/ + optional ZIP).
+- Add visual regression smoke script for the `static/` workflow (fast and deterministic).
