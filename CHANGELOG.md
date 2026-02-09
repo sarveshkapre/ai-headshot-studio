@@ -21,6 +21,10 @@
 - Recent export history (last 3) with quick download buttons.
 - Keyboard shortcuts help modal.
 - Preset export/import controls (JSON) for reusing studio settings.
+- Startup diagnostics panel showing local API status, background-removal readiness, and upload limits.
+- Pre-process export estimate in the UI (predicted output dimensions + approximate size).
+- API contract coverage for `/api/health`, `/api/presets`, and `/api/process`.
+- `make smoke` target for local end-to-end health/process verification.
 
 ### Changed
 - Images are auto-oriented using EXIF metadata so previews/crops match how the photo was taken.
@@ -28,7 +32,10 @@
 - UI no longer pulls Google Fonts (fully local/offline-friendly after setup).
 - Style presets now populate slider values in the UI; `/api/presets` includes style parameters.
 - Make targets now run with either local `.venv` binaries or the active Python environment (CI-safe).
+- `/api/health` now returns structured diagnostics (`version`, limits, and background-removal availability).
+- Dev dependencies now include `httpx` for FastAPI endpoint tests.
 
 ### Fixed
 - More consistent request normalization (case-insensitive preset/style/format/background handling).
 - Recent export history downloads no longer break after processing another image.
+- Health checks no longer crash when `rembg` is installed without an ONNX runtime backend.

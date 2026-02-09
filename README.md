@@ -8,6 +8,8 @@ Local-first headshot enhancement studio for background removal, retouching, and 
 - Crop presets with headshot-friendly framing
 - One-click use-case presets (LinkedIn, resume, passport)
 - Preset export/import (JSON) for reusable studio setups
+- Pre-process export estimator (predicted dimensions + approximate output size)
+- Startup diagnostics panel (API health, background-removal availability, upload limit)
 - Custom background color picker + framing guide overlay
 - Downloadable PNG/JPEG output
 - Accessible, keyboard-friendly UI
@@ -16,6 +18,8 @@ Local-first headshot enhancement studio for background removal, retouching, and 
 ```bash
 make setup
 make dev
+make check
+make smoke
 ```
 Open `http://127.0.0.1:8000`.
 
@@ -26,6 +30,7 @@ docker run --rm -p 8000:8000 ai-headshot-studio
 ```
 
 ## API
+- `GET /api/health` — runtime diagnostics (`status`, `version`, limits, local background-removal availability)
 - `GET /api/presets` — list crop presets and styles
 - `POST /api/process` — multipart form data
   - Response includes `X-Output-Width`, `X-Output-Height`, `X-Output-Format`, `X-Processing-Ms`, `X-Output-Bytes` headers

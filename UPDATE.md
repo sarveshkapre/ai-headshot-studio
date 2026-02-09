@@ -1,3 +1,22 @@
+# Update (2026-02-09)
+
+## Summary
+- Added structured runtime diagnostics to `GET /api/health` (service version, limits, background-removal availability).
+- Added a startup diagnostics card in the web UI to surface local API and background-removal readiness.
+- Added a pre-process export estimator in the studio UI (predicted output dimensions and approximate size).
+- Added endpoint contract tests for `health`, `presets`, and `process` paths.
+- Added a reusable local smoke command (`make smoke`) that verifies health + image processing end-to-end.
+
+## Verification
+Commands run:
+- `make check`
+- `node --check static/app.js`
+- `make build`
+- `make smoke`
+
+## PR
+- No PR (worked directly on `main`).
+
 # Update (2026-02-08)
 
 ## Summary
