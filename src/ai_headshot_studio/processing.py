@@ -47,6 +47,8 @@ def validate_bytes(data: bytes) -> None:
 def load_image(data: bytes) -> Image.Image:
     try:
         image = Image.open(io.BytesIO(data))
+    except Image.DecompressionBombError as exc:  # pragma: no cover - PIL internal
+        raise ProcessingError("Image dimensions too large.", code="image_too_large") from exc
     except Exception as exc:  # pragma: no cover - PIL internal
         raise ProcessingError("Unsupported or corrupted image.", code="invalid_image") from exc
 
@@ -56,9 +58,15 @@ def load_image(data: bytes) -> Image.Image:
     if fmt not in allowed:
         raise ProcessingError("Unsupported image format.", code="unsupported_image_format")
 
+    # Guard against decompression bombs: reject oversized dimensions before decoding.
+    if image.width * image.height > MAX_PIXELS:
+        raise ProcessingError("Image dimensions too large.", code="image_too_large")
+
     try:
         image.load()
         image = ImageOps.exif_transpose(image)
+    except Image.DecompressionBombError as exc:  # pragma: no cover - PIL internal
+        raise ProcessingError("Image dimensions too large.", code="image_too_large") from exc
     except Exception as exc:  # pragma: no cover - PIL internal
         raise ProcessingError("Unsupported or corrupted image.", code="invalid_image") from exc
     if image.width * image.height > MAX_PIXELS:

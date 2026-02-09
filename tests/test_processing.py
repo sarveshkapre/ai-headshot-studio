@@ -195,6 +195,17 @@ def test_load_image_applies_exif_orientation() -> None:
     assert image.size == (200, 400)
 
 
+def test_load_image_rejects_over_max_pixels_before_decode() -> None:
+    # Mode "1" keeps the fixture lightweight while still exercising the pixel guardrail.
+    image = Image.new("1", (5000, 5000), 0)  # 25,000,000 pixels (> 20,000,000 max)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    data = buffer.getvalue()
+    with pytest.raises(ProcessingError) as exc:
+        load_image(data)
+    assert exc.value.code == "image_too_large"
+
+
 def test_available_styles_include_parameters() -> None:
     styles = {style["key"]: style for style in available_styles()}
     classic = styles["classic"]
