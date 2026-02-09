@@ -2,8 +2,9 @@
 
 ## Near-term
 - Face-guided crop + headroom controls
-- Batch processing workflow
-- Preset sharing improvements (multi-preset bundles + validation)
+- Batch processing workflow (ZIP export) ✅
+- Preset sharing improvements (multi-preset bundles) ✅
+- Preset sharing improvements (bundle validation + conflict handling UX)
 
 ## Later
 - Skin-tone consistency check
