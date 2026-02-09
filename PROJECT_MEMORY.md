@@ -18,6 +18,44 @@
 - Confidence: High.
 - Trust label: `verified-local`.
 
+### 2026-02-09 | Make headroom control intuitive while keeping `top_bias` stable
+- Decision: Keep API/storage using `top_bias` (lower => more headroom), but make the UI “Headroom” slider intuitive by reversing range direction (RTL) and displaying `headroom = 1 - top_bias`.
+- Why: Improves UX without breaking the API contract; avoids confusing “slider moves the wrong way” behavior.
+- Evidence:
+  - UI: `static/index.html` (`topBias` range is RTL), `static/styles.css` (`.range--rtl`), `static/app.js` (inverted display value).
+  - Docs: `README.md` (correct `top_bias` semantics).
+- Validation:
+  - `node --check static/app.js` (pass)
+  - `make check` (pass) — `21 passed in 0.60s`
+- Commit: `52eda75e8a3857ed7370c353d3e3346d80c86182`.
+- Confidence: High.
+- Trust label: `verified-local`.
+
+### 2026-02-09 | Subject-guided crop framing via alpha foreground bounds
+- Decision: When an alpha channel is present (transparent PNGs and background-removed outputs), derive a conservative foreground bounding box and use it to bias crop framing toward the subject.
+- Why: Provides a lightweight “good enough” framing improvement without adding heavy face-detection dependencies; improves results for `remove_bg` workflows.
+- Evidence:
+  - Code: `src/ai_headshot_studio/processing.py` (`alpha_foreground_bbox`, `crop_to_aspect_focus`, process pipeline focus capture).
+  - Tests: `tests/test_processing.py` (focus bbox keeps foreground in frame; bbox detection).
+- Validation:
+  - `make check` (pass) — `23 passed in 0.44s`
+- Commit: `9463aa3d410b15cd4dd1c8d9e412c547f35db34b`.
+- Confidence: Medium-high (heuristic by design; safe fallback).
+- Trust label: `verified-local`.
+
+### 2026-02-09 | Pre-decode pixel guardrail for oversized inputs
+- Decision: Reject images with dimensions exceeding `MAX_PIXELS` before calling `image.load()`; map PIL decompression-bomb errors to a stable `image_too_large` code.
+- Why: Prevents decompression-bomb style inputs from consuming excessive memory/CPU during decode.
+- Evidence:
+  - Code: `src/ai_headshot_studio/processing.py` (pre-decode dimension check, `DecompressionBombError` handling).
+  - Tests: `tests/test_processing.py` (oversized PNG fixture rejection).
+- Validation:
+  - `make check` (pass) — `24 passed in 0.45s`
+  - `make smoke` (pass) — `smoke ok: 600x600 jpeg` / `batch smoke ok: 2x 600x600 jpeg in zip`
+- Commit: `ecf56648f19f0369358a7d9abdf52a15e84b7907`.
+- Confidence: High.
+- Trust label: `verified-local`.
+
 ### 2026-02-09 | Structured API errors + stricter server-side upload validation
 - Decision: Return structured API error payloads (`detail.code`, `detail.message`) and enforce server-side image validation via format sniffing + allowlist.
 - Why: Improves UX (client can surface consistent messages) and hardens the API against spoofed content-types and non-image uploads.
@@ -144,6 +182,8 @@
 - `docker build -t ai-headshot-studio:local .` (fail) — `docker` not installed in this environment
 - `make check` (pass) — `21 passed in 0.42s` (rerun after batch robustness changes)
 - `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip` (rerun after batch robustness changes)
+- `make check` (pass) — `24 passed in 0.45s` (after subject-guided crop + pre-decode pixel guard)
+- `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip` (after pre-decode pixel guard)
 - `gh run watch 21825642565 --exit-status` (pass) — GitHub Actions `CI` on `main`
 - `gh run watch 21825642558 --exit-status` (pass) — GitHub Actions `CodeQL` on `main`
 
@@ -152,6 +192,8 @@
 ### 2026-02-09
 - PhotoRoom positions a batch workflow with a ZIP download and per-batch output options; includes toggles like “Keep original background”. Source: `https://www.photoroom.com/tools/batch-mode`
 - Canva background remover help docs describe input limits (example: <9MB, downscales to 10MP). Source: `https://www.canva.com/help/background-remover/`
+- remove.bg API docs show format options and cropping/position controls. Source: `https://www.remove.bg/api`
+- PFPMaker markets generated headshots with background/style variants and positioning. Source: `https://pfpmaker.com/headshot-generator`
 
 ### 2026-02-09 (Cycle 2) | Batch + limits expectations
 - Batch baseline: common batch tools expose output format choices (PNG/JPEG/WEBP) and allow naming/organizing outputs. Source: `https://help.photoroom.com/en/articles/12137322-edit-multiple-photos-with-the-batch-feature-web-app`
