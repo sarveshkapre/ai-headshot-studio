@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import tempfile
 import time
@@ -37,6 +38,9 @@ app = FastAPI(title="AI Headshot Studio", version="0.1.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 _SAFE_NAME_RE = re.compile(r"[^a-zA-Z0-9._-]+")
+MAX_BATCH_IMAGES = 24
+MAX_BATCH_TOTAL_MB = 72
+MAX_BATCH_TOTAL_BYTES = MAX_BATCH_TOTAL_MB * 1024 * 1024
 
 
 def api_detail(code: str, message: str, **extra: object) -> dict[str, object]:
@@ -92,7 +96,13 @@ def build_output_headers(
     }
 
 
-async def read_upload_limited(upload: UploadFile, max_bytes: int) -> bytes:
+async def read_upload_limited(
+    upload: UploadFile,
+    max_bytes: int,
+    *,
+    total_counter: list[int] | None = None,
+    total_limit: int | None = None,
+) -> bytes:
     content_type = (upload.content_type or "").strip().lower()
     if content_type and not content_type.startswith("image/"):
         message = "Unsupported file type. Please choose an image."
@@ -107,6 +117,16 @@ async def read_upload_limited(upload: UploadFile, max_bytes: int) -> bytes:
         if not chunk:
             return bytes(buffer)
         buffer.extend(chunk)
+        if total_counter is not None:
+            total_counter[0] += len(chunk)
+            if total_limit is not None and total_counter[0] > total_limit:
+                raise HTTPException(
+                    status_code=413,
+                    detail=api_detail(
+                        "batch_too_large",
+                        f"Batch too large. Max {MAX_BATCH_TOTAL_MB}MB total.",
+                    ),
+                )
         if len(buffer) > max_bytes:
             raise HTTPException(
                 status_code=413,
@@ -129,6 +149,9 @@ async def health() -> dict[str, object]:
             "max_upload_mb": MAX_UPLOAD_MB,
             "max_upload_bytes": MAX_UPLOAD_BYTES,
             "max_pixels": MAX_PIXELS,
+            "max_batch_images": MAX_BATCH_IMAGES,
+            "max_batch_total_mb": MAX_BATCH_TOTAL_MB,
+            "max_batch_total_bytes": MAX_BATCH_TOTAL_BYTES,
         },
         "features": {
             "background_removal": background_removal_diagnostics(),
@@ -237,20 +260,22 @@ async def batch(
     jpeg_quality: int = Form(92),
     format: str = Form("png"),
     folder: str | None = Form(None),
+    continue_on_error: str | None = Form(None),
 ) -> StreamingResponse:
     if len(images) == 0:
         raise HTTPException(
             status_code=400,
             detail=api_detail("missing_images", "No images provided."),
         )
-    if len(images) > 24:
+    if len(images) > MAX_BATCH_IMAGES:
         raise HTTPException(
             status_code=400,
-            detail=api_detail("too_many_images", "Too many images. Max 24."),
+            detail=api_detail("too_many_images", f"Too many images. Max {MAX_BATCH_IMAGES}."),
         )
 
     output_format = format.strip().lower()
     zip_folder = _safe_zip_folder(folder)
+    should_continue = parse_bool(continue_on_error)
     req = ProcessRequest(
         remove_bg=parse_bool(remove_bg),
         background=background,
@@ -269,15 +294,53 @@ async def batch(
 
     started = time.perf_counter()
     spool = tempfile.SpooledTemporaryFile(max_size=48 * 1024 * 1024)
+    total_counter: list[int] = [0]
+    errors: list[dict[str, object]] = []
+    succeeded = 0
     try:
         with zipfile.ZipFile(spool, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
             for idx, upload in enumerate(images, start=1):
-                data = await read_upload_limited(upload, MAX_UPLOAD_BYTES)
+                filename = _safe_basename(upload.filename)
                 try:
+                    data = await read_upload_limited(
+                        upload,
+                        MAX_UPLOAD_BYTES,
+                        total_counter=total_counter,
+                        total_limit=MAX_BATCH_TOTAL_BYTES,
+                    )
                     result = process_image(data, req)
                     payload = to_bytes(result, output_format, req.jpeg_quality)
+                except HTTPException as exc:
+                    detail = exc.detail
+                    if isinstance(detail, dict):
+                        code = str(detail.get("code", "http_error"))
+                        message = str(detail.get("message", ""))
+                    else:
+                        code = "http_error"
+                        message = str(detail)
+
+                    if should_continue and code != "batch_too_large":
+                        errors.append(
+                            {
+                                "index": idx,
+                                "filename": filename,
+                                "code": code,
+                                "message": message or "Upload rejected.",
+                            }
+                        )
+                        continue
+                    raise
                 except ProcessingError as exc:
-                    filename = _safe_basename(upload.filename)
+                    if should_continue:
+                        errors.append(
+                            {
+                                "index": idx,
+                                "filename": filename,
+                                "code": exc.code,
+                                "message": str(exc),
+                            }
+                        )
+                        continue
                     raise HTTPException(
                         status_code=400,
                         detail=api_detail(
@@ -290,12 +353,29 @@ async def batch(
                     ) from exc
 
                 ext = "png" if output_format == "png" else "jpg"
-                base = _safe_basename(upload.filename)
-                stem = Path(base).stem
+                stem = Path(filename).stem
                 out_name = f"{idx:02d}-{stem}.{ext}"
                 if zip_folder:
                     out_name = f"{zip_folder}/{out_name}"
                 archive.writestr(out_name, payload)
+
+                succeeded += 1
+
+            if should_continue and errors:
+                report = {
+                    "total": len(images),
+                    "succeeded": succeeded,
+                    "failed": len(errors),
+                    "output_format": output_format,
+                    "errors": errors,
+                }
+                report_name = "errors.json"
+                if zip_folder:
+                    report_name = f"{zip_folder}/{report_name}"
+                archive.writestr(
+                    report_name,
+                    json.dumps(report, indent=2, sort_keys=True).encode("utf-8"),
+                )
         spool.seek(0)
     except HTTPException:
         spool.close()
@@ -313,6 +393,8 @@ async def batch(
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',
         "X-Batch-Count": str(len(images)),
+        "X-Batch-Succeeded": str(succeeded if should_continue else len(images)),
+        "X-Batch-Failed": str(len(errors) if should_continue else 0),
         "X-Processing-Ms": str(max(0, elapsed_ms)),
         "X-Output-Format": output_format,
     }

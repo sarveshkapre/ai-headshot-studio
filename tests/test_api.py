@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import zipfile
 
 from fastapi.testclient import TestClient
@@ -169,3 +170,69 @@ def test_batch_returns_zip_with_processed_images() -> None:
 
         sample = Image.open(io.BytesIO(archive.read(names[0])))
         assert sample.size == (600, 600)
+
+
+def test_batch_continue_on_error_returns_zip_with_errors_json() -> None:
+    payload1 = make_image()
+    payload2 = b"not an image"
+    response = client.post(
+        "/api/batch",
+        files=[
+            ("images", ("a.png", payload1, "image/png")),
+            ("images", ("b.png", payload2, "image/png")),
+        ],
+        data={
+            "remove_bg": "false",
+            "background": "white",
+            "preset": "passport-2x2",
+            "format": "jpeg",
+            "folder": "My Batch",
+            "continue_on_error": "true",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["x-batch-count"] == "2"
+    assert response.headers["x-batch-succeeded"] == "1"
+    assert response.headers["x-batch-failed"] == "1"
+
+    buffer = io.BytesIO(response.content)
+    with zipfile.ZipFile(buffer) as archive:
+        names = archive.namelist()
+        assert any(name.endswith(".jpg") for name in names)
+        assert any(name.endswith("errors.json") for name in names)
+        error_name = next(name for name in names if name.endswith("errors.json"))
+        report = json.loads(archive.read(error_name).decode("utf-8"))
+        assert report["total"] == 2
+        assert report["succeeded"] == 1
+        assert report["failed"] == 1
+        assert isinstance(report["errors"], list)
+        assert report["errors"][0]["code"] == "invalid_image"
+
+
+def test_batch_rejects_total_size_limit() -> None:
+    import ai_headshot_studio.app as app_module
+
+    old_bytes = app_module.MAX_BATCH_TOTAL_BYTES
+    old_mb = app_module.MAX_BATCH_TOTAL_MB
+    try:
+        app_module.MAX_BATCH_TOTAL_MB = 1
+        app_module.MAX_BATCH_TOTAL_BYTES = 1024
+        payload = make_image(width=600, height=600)
+        response = client.post(
+            "/api/batch",
+            files=[
+                ("images", ("a.png", payload, "image/png")),
+            ],
+            data={
+                "remove_bg": "false",
+                "background": "white",
+                "preset": "portrait-4x5",
+                "format": "png",
+            },
+        )
+        assert response.status_code == 413
+        detail = response.json()["detail"]
+        assert detail["code"] == "batch_too_large"
+    finally:
+        app_module.MAX_BATCH_TOTAL_BYTES = old_bytes
+        app_module.MAX_BATCH_TOTAL_MB = old_mb
