@@ -72,5 +72,11 @@ docker run --rm -p 8000:8000 ai-headshot-studio
 - Background removal runs locally and may download a model the first time it is used.
 - For best results, use a high-resolution, well-lit source image.
 
+## Batch CLI
+For non-UI workflows, process a folder from the command line:
+```bash
+.venv/bin/python scripts/batch_cli.py --input ./photos --output ./outputs --preset portrait-4x5 --format jpeg --continue-on-error --zip ./outputs/batch.zip
+```
+
 ## Repo
 All project docs live in `docs/` (see `docs/PROJECT.md` for commands).

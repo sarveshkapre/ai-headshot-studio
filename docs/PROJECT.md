@@ -13,6 +13,11 @@ make smoke
 make release
 ```
 
+## Batch CLI
+```bash
+.venv/bin/python scripts/batch_cli.py --input ./photos --output ./outputs --format jpeg --continue-on-error
+```
+
 ## Environment
 - Python 3.11+
 
