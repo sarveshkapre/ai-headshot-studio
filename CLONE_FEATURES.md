@@ -51,6 +51,12 @@
 - [2026-02-08] Added request/processing edge-case tests.
   - Evidence: `tests/test_processing.py` (`11 passed` via `make check`).
 
+## Gap Map (Cycle 2, Untrusted-Informed)
+- Missing: face-guided crop framing (auto head/face placement), batch CLI for folder workflows, batch continue-on-error report.
+- Weak: import surfaces (bundles/presets) need ongoing hardening as sharing expands; Docker verification is currently untested locally (no Docker).
+- Parity: batch ZIP export, saved profiles + bundles, crop presets/headroom control, predictable export metadata.
+- Differentiator: local-first privacy posture (no accounts/no third-party uploads), offline-ready static UI after setup.
+
 ## Insights
 - CI failures were caused by Make targets hardcoding `.venv/bin/*` while GitHub Actions installs dependencies into the runner Python environment.
 - History URLs must be independent from the active preview URL; otherwise revoking preview URLs breaks older history downloads.
