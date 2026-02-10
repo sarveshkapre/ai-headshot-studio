@@ -9,7 +9,6 @@ RUN adduser --disabled-password --gecos "" appuser
 
 COPY pyproject.toml README.md LICENSE /app/
 COPY src /app/src
-COPY static /app/static
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir .
 

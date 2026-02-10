@@ -30,8 +30,13 @@ from ai_headshot_studio.processing import (
     to_bytes,
 )
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-STATIC_DIR = BASE_DIR / "static"
+PACKAGE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = PACKAGE_DIR / "static"
+if not STATIC_DIR.is_dir():
+    # Backward-compatible fallback for older repo layouts / local dev checkouts.
+    legacy_static = Path(__file__).resolve().parents[2] / "static"
+    if legacy_static.is_dir():
+        STATIC_DIR = legacy_static
 
 app = FastAPI(title="AI Headshot Studio", version="0.1.0")
 
