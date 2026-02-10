@@ -11,7 +11,7 @@
 ## Candidate Features To Do
 ### Selected (Cycle 1)
 - [x] P1: Harden background removal against `SystemExit` from `rembg` import/runtime and return a stable `background_removal_unavailable` error instead of crashing the request (add unit tests).
-- [x] P2: Add a deterministic static UI contract test (assert critical `static/index.html` element IDs + `static/app.js` lookups remain valid) to catch accidental frontend regressions in `make check`.
+- [x] P2: Add a deterministic static UI contract test (assert critical `src/ai_headshot_studio/static/index.html` element IDs + `src/ai_headshot_studio/static/app.js` lookups remain valid) to catch accidental frontend regressions in `make check`.
 - [x] P3: Add a processing pipeline micro-benchmark script (`make bench`) for a quick local perf guardrail (not a CI gate) and document it.
 - [x] P4: Refresh docs/trackers: dedupe backlog, record market scan links (untrusted), and keep `docs/PROJECT.md` “next improvements” aligned with reality.
 
@@ -27,7 +27,7 @@
 - [x] P4: Normalize `CHANGELOG.md` bullet indentation (avoid malformed nested bullets in “Added”).
 
 ### Backlog
-- [ ] P3: Add visual regression smoke script for `static/` workflow interactions (optional, fast, deterministic).
+- [ ] P3: Add visual regression smoke script for `src/ai_headshot_studio/static/` workflow interactions (optional, fast, deterministic).
 - [ ] P4: Add skin-tone consistency check (warning-only) for retouch presets.
 - [ ] P4: Add print sheet layouts (2x2 / 3x3) for easy at-home prints.
 - [ ] P4: Add on-device model selection (tradeoff UX: speed vs quality) for background removal.
@@ -35,18 +35,18 @@
 ## Implemented
 - [2026-02-10] Background removal no longer crashes on `SystemExit` from `rembg`; returns stable `background_removal_unavailable` error instead.
   - Evidence: `src/ai_headshot_studio/processing.py` (`remove_background` import/runtime guards), `tests/test_processing.py` (SystemExit mapping tests).
-- [2026-02-10] Static UI contract tests ensure `static/app.js` `getElementById(...)` references exist in `static/index.html` and prevent duplicate IDs.
+- [2026-02-10] Static UI contract tests ensure `src/ai_headshot_studio/static/app.js` `getElementById(...)` references exist in `src/ai_headshot_studio/static/index.html` and prevent duplicate IDs.
   - Evidence: `tests/test_static_contract.py`.
 - [2026-02-10] Processing micro-benchmark script with `make bench` for local perf guardrails.
   - Evidence: `scripts/bench_processing.py`, `Makefile`, `docs/PROJECT.md`.
 - [2026-02-09] Face-guided crop framing (best-effort, optional OpenCV) with `/api/health` diagnostics and UI surfacing.
-  - Evidence: `src/ai_headshot_studio/processing.py` (`face_subject_bbox`, `focus_bbox`), `src/ai_headshot_studio/app.py` (`face_framing_diagnostics`), `static/index.html` + `static/app.js` (diagnostics row), `pyproject.toml` (optional `face` extra), `tests/test_processing.py` (focus propagation).
+  - Evidence: `src/ai_headshot_studio/processing.py` (`face_subject_bbox`, `focus_bbox`), `src/ai_headshot_studio/app.py` (`face_framing_diagnostics`), `src/ai_headshot_studio/static/index.html` + `src/ai_headshot_studio/static/app.js` (diagnostics row), `pyproject.toml` (optional `face` extra), `tests/test_processing.py` (focus propagation).
 - [2026-02-09] Batch CLI helper for processing folders to `outputs/` with optional ZIP and `errors.json` report.
   - Evidence: `scripts/batch_cli.py`, `tests/test_batch_cli.py`, `README.md`, `docs/PROJECT.md`.
 - [2026-02-09] WebP output support across API + UI with feature detection (`webp_unavailable`) when encoder is unavailable.
-  - Evidence: `src/ai_headshot_studio/processing.py` (`to_bytes` WebP branch), `src/ai_headshot_studio/app.py` (content-type + ZIP ext mapping), `static/index.html` + `static/app.js` (format dropdown + quality enablement), `README.md` (API docs), `tests/test_processing.py` + `tests/test_api.py`.
+  - Evidence: `src/ai_headshot_studio/processing.py` (`to_bytes` WebP branch), `src/ai_headshot_studio/app.py` (content-type + ZIP ext mapping), `src/ai_headshot_studio/static/index.html` + `src/ai_headshot_studio/static/app.js` (format dropdown + quality enablement), `README.md` (API docs), `tests/test_processing.py` + `tests/test_api.py`.
 - [2026-02-09] Headroom control made intuitive in UI (RTL slider + display inversion) + docs corrected for `top_bias`.
-  - Evidence: `static/index.html` (`topBias` range is RTL + visible value is headroom), `static/styles.css` (`.range--rtl`), `static/app.js` (headroom display inversion), `README.md` (`top_bias` semantics).
+  - Evidence: `src/ai_headshot_studio/static/index.html` (`topBias` range is RTL + visible value is headroom), `src/ai_headshot_studio/static/styles.css` (`.range--rtl`), `src/ai_headshot_studio/static/app.js` (headroom display inversion), `README.md` (`top_bias` semantics).
 - [2026-02-09] Subject-guided crop framing using alpha mask foreground bounds when available.
   - Evidence: `src/ai_headshot_studio/processing.py` (`alpha_foreground_bbox`, focus-aware crop), `tests/test_processing.py` (focus bbox coverage).
 - [2026-02-09] Reject oversized images (> `MAX_PIXELS`) before full decode to mitigate decompression-bomb style inputs.
@@ -54,25 +54,25 @@
 - [2026-02-09] Fixed malformed bullet indentation in `CHANGELOG.md` “Added” list.
   - Evidence: `CHANGELOG.md`.
 - [2026-02-09] Batch robustness improvements: continue-on-error ZIP reports + total batch size cap + UI surfaced limits and success/failure counts.
-  - Evidence: `src/ai_headshot_studio/app.py` (`continue_on_error`, `errors.json`, batch size cap + headers), `tests/test_api.py` (continue-on-error + cap coverage), `static/app.js` + `static/index.html` (limits hint, total bytes selection, succeeded/failed messaging), `README.md` (API doc).
+  - Evidence: `src/ai_headshot_studio/app.py` (`continue_on_error`, `errors.json`, batch size cap + headers), `tests/test_api.py` (continue-on-error + cap coverage), `src/ai_headshot_studio/static/app.js` + `src/ai_headshot_studio/static/index.html` (limits hint, total bytes selection, succeeded/failed messaging), `README.md` (API doc).
 - [2026-02-09] Hardened upload validation + structured API error payloads (`code`, `message`).
   - Evidence: `src/ai_headshot_studio/processing.py` (format allowlist), `src/ai_headshot_studio/app.py` (structured `detail`), `tests/test_api.py` (invalid bytes + GIF rejection).
 - [2026-02-09] Preset bundle import validation + conflict handling (overwrite toggle + summary toast).
-  - Evidence: `static/index.html` (`bundleOverwrite` toggle), `static/app.js` (`sanitizeImportedSettings`, import summary).
+  - Evidence: `src/ai_headshot_studio/static/index.html` (`bundleOverwrite` toggle), `src/ai_headshot_studio/static/app.js` (`sanitizeImportedSettings`, import summary).
 - [2026-02-09] Docker health checks wired to `/api/health`.
   - Evidence: `Dockerfile` (`HEALTHCHECK`).
 - [2026-02-09] Batch processing MVP (multi-upload to server-side ZIP download).
   - Evidence: `src/ai_headshot_studio/app.py` (`POST /api/batch`), `tests/test_api.py` (ZIP assertions), `scripts/smoke_api.sh` (batch smoke).
 - [2026-02-09] Preset bundle library (saved named profiles) + bundle export/import (JSON).
-  - Evidence: `static/index.html` (Profiles card), `static/app.js` (profile storage + bundle import/export), `static/styles.css` (profile UI styles).
+  - Evidence: `src/ai_headshot_studio/static/index.html` (Profiles card), `src/ai_headshot_studio/static/app.js` (profile storage + bundle import/export), `src/ai_headshot_studio/static/styles.css` (profile UI styles).
 - [2026-02-09] Profile suggestions (auto-name on save when input is blank) based on use-case / preset / format.
-  - Evidence: `static/app.js` (`suggestProfileName`, `saveProfile()` uses suggestion), `static/index.html` (Profiles UI).
+  - Evidence: `src/ai_headshot_studio/static/app.js` (`suggestProfileName`, `saveProfile()` uses suggestion), `src/ai_headshot_studio/static/index.html` (Profiles UI).
 - [2026-02-09] Structured runtime diagnostics endpoint for production visibility.
   - Evidence: `src/ai_headshot_studio/app.py` (`/api/health`, dependency-safe background-removal diagnostics).
 - [2026-02-09] Startup diagnostics panel in the web studio.
-  - Evidence: `static/index.html`, `static/app.js`, `static/styles.css` (`System diagnostics` card + health fetch/render).
+  - Evidence: `src/ai_headshot_studio/static/index.html`, `src/ai_headshot_studio/static/app.js`, `src/ai_headshot_studio/static/styles.css` (`System diagnostics` card + health fetch/render).
 - [2026-02-09] Pre-process export estimator in the UI.
-  - Evidence: `static/app.js` (`queueEstimate`, canvas size estimation), `static/index.html` (`estimateMeta`).
+  - Evidence: `src/ai_headshot_studio/static/app.js` (`queueEstimate`, canvas size estimation), `src/ai_headshot_studio/static/index.html` (`estimateMeta`).
 - [2026-02-09] API contract tests for health/presets/process.
   - Evidence: `tests/test_api.py` (`5` endpoint coverage tests).
 - [2026-02-09] Reproducible smoke verification target.
@@ -84,9 +84,9 @@
 - [2026-02-08] CI-safe Make targets and command fallback.
   - Evidence: `Makefile` (uses active Python when `.venv` is absent), `make -n check VENV=.ci-missing`.
 - [2026-02-08] Preset export/import in the web studio.
-  - Evidence: `static/index.html`, `static/app.js`, `static/styles.css`.
+  - Evidence: `src/ai_headshot_studio/static/index.html`, `src/ai_headshot_studio/static/app.js`, `src/ai_headshot_studio/static/styles.css`.
 - [2026-02-08] Stable export history download links + URL cleanup.
-  - Evidence: `static/app.js` (`clearHistory`, separate history object URLs, unload/reset cleanup).
+  - Evidence: `src/ai_headshot_studio/static/app.js` (`clearHistory`, separate history object URLs, unload/reset cleanup).
 - [2026-02-08] Added request/processing edge-case tests.
   - Evidence: `tests/test_processing.py` (`11 passed` via `make check`).
 
@@ -97,13 +97,13 @@
 - Differentiator: local-first privacy posture (no accounts/no third-party uploads), offline-ready static UI after setup.
 
 ## Gap Map (Cycle 5)
-- Missing: visual regression smoke script for `static/`.
+- Missing: visual regression smoke script for `src/ai_headshot_studio/static/`.
 - Weak: face framing still best-effort (optional dependency); should remain conservative and always fall back cleanly.
 - Parity: WebP output option, batch ZIP workflow, diagnostics surfaced in UI.
 - Differentiator: local-only processing + optional local dependencies (no remote calls).
 
 ## Gap Map (Cycle 1)
-- Missing: visual regression smoke script for `static/` workflow interactions (screenshots), skin-tone consistency check, print sheet layouts.
+- Missing: visual regression smoke script for `src/ai_headshot_studio/static/` workflow interactions (screenshots), skin-tone consistency check, print sheet layouts.
 - Weak: optional background removal dependencies are still best-effort across environments; keep error mapping stable and avoid crashes.
 - Parity: batch ZIP workflow, WebP output option, diagnostics surfaced in UI.
 - Differentiator: local-only processing + optional local dependencies (no remote calls).

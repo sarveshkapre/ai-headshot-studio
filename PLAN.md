@@ -51,4 +51,4 @@ More: see `docs/PROJECT.md`.
 ## Next to ship
 - Face-guided crop framing (lightweight detector).
 - Add batch CLI helper (process a folder to outputs/ + optional ZIP).
-- Add visual regression smoke script for the `static/` workflow (fast and deterministic).
+- Add visual regression smoke script for the `src/ai_headshot_studio/static/` workflow (fast and deterministic).

@@ -16,13 +16,29 @@
 - Trust label: `verified-local`.
 
 ### 2026-02-10 | Add deterministic static UI contract tests for `getElementById(...)` IDs
-- Decision: Add a pytest contract test that asserts `static/app.js` `getElementById(...)` targets exist in `static/index.html` and that `index.html` has no duplicate IDs.
+- Decision: Add a pytest contract test that asserts `src/ai_headshot_studio/static/app.js` `getElementById(...)` targets exist in `src/ai_headshot_studio/static/index.html` and that `index.html` has no duplicate IDs.
 - Why: This catches a common class of accidental frontend regressions without needing a browser runner.
 - Evidence:
   - Tests: `tests/test_static_contract.py`.
 - Validation:
   - `make check` (pass) — `33 passed in 0.92s`
 - Commit: `cba26ae7278ca07a3f5fbc2f601d2aa50e18608b`.
+- Confidence: High.
+- Trust label: `verified-local`.
+
+### 2026-02-10 | Package static UI assets inside the Python wheel
+- Decision: Move the web UI assets from `static/` into `src/ai_headshot_studio/static/` so the wheel contains the UI, and resolve `STATIC_DIR` relative to the package; keep the `/static/*` URL contract unchanged.
+- Why: Keeps `pip install ai-headshot-studio` deployments self-contained (API + UI) and reduces drift between Docker and wheel installs.
+- Evidence:
+  - Code: `src/ai_headshot_studio/app.py` (package-relative `STATIC_DIR` with legacy fallback), `Dockerfile` (no separate `COPY static`).
+  - UI: `src/ai_headshot_studio/static/index.html`, `src/ai_headshot_studio/static/app.js`, `src/ai_headshot_studio/static/styles.css`.
+  - Tests: `tests/test_static_contract.py` (reads `STATIC_DIR` directly).
+- Validation:
+  - `make check` (pass) — `33 passed in 0.73s`
+  - `make smoke` (pass) — `smoke ok: 600x600 jpeg` / `batch smoke ok: 2x 600x600 jpeg in zip`
+  - `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`
+  - `.venv/bin/python -m zipfile -l dist/ai_headshot_studio-0.1.0-py3-none-any.whl | rg ai_headshot_studio/static` (pass) — includes `index.html`, `app.js`, `styles.css`
+- Commit: `cfd93ef8bd2b25b2cb4be99dcd62cfb7f40f0865`.
 - Confidence: High.
 - Trust label: `verified-local`.
 
@@ -45,7 +61,7 @@
 - Evidence:
   - Code: `src/ai_headshot_studio/processing.py` (`face_subject_bbox`, `focus_bbox` integration in `process_image`).
   - API: `src/ai_headshot_studio/app.py` (`face_framing_diagnostics` in `/api/health`).
-  - UI: `static/index.html`, `static/app.js` (diagnostics row).
+  - UI: `src/ai_headshot_studio/static/index.html`, `src/ai_headshot_studio/static/app.js` (diagnostics row).
   - Packaging: `pyproject.toml` (optional `face` extra).
   - Tests: `tests/test_processing.py` (focus bbox selection + propagation into crop call).
 - Validation:
@@ -72,7 +88,7 @@
 - Why: WebP is a common export format for web workflows and can reduce output size while keeping acceptable quality.
 - Evidence:
   - Code: `src/ai_headshot_studio/processing.py` (`normalize_output_format` + WebP encoder branch in `to_bytes`), `src/ai_headshot_studio/app.py` (content-type mapping, batch ext mapping).
-  - UI: `static/index.html`, `static/app.js` (WebP option + quality behavior).
+  - UI: `src/ai_headshot_studio/static/index.html`, `src/ai_headshot_studio/static/app.js` (WebP option + quality behavior).
   - Docs: `README.md` (API format docs), `CHANGELOG.md`, `docs/ROADMAP.md` (face framing marked shipped).
   - Tests: `tests/test_processing.py` (feature-detected WebP encoding), `tests/test_api.py` (WebP request accepts or reports `webp_unavailable`).
 - Validation:
@@ -89,12 +105,12 @@
 - Evidence:
   - API: `src/ai_headshot_studio/app.py` (`continue_on_error`, `errors.json` report, total batch byte cap, new batch headers, `/api/health` limits).
   - Tests: `tests/test_api.py` (continue-on-error ZIP + report assertions, total-size cap rejection).
-  - UI: `static/index.html`, `static/app.js` (batch limit hint from `/api/health`, client-side total-byte enforcement, succeeded/failed messaging).
+  - UI: `src/ai_headshot_studio/static/index.html`, `src/ai_headshot_studio/static/app.js` (batch limit hint from `/api/health`, client-side total-byte enforcement, succeeded/failed messaging).
   - Docs: `README.md`, `CHANGELOG.md`.
 - Validation:
   - `make check` (pass) — `21 passed in 0.42s`
   - `make smoke` (pass) — output includes `batch smoke ok: 2x 600x600 jpeg in zip`
-  - `node --check static/app.js` (pass)
+  - `node --check src/ai_headshot_studio/static/app.js` (pass)
 - Commits: `f7dfd0616e59ff27df3051a4fc3fe6878bd37dfc`, `23c37ad5e76d1e24d6766aa19a3e6ce544f860a6`.
 - Confidence: High.
 - Trust label: `verified-local`.
@@ -103,10 +119,10 @@
 - Decision: Keep API/storage using `top_bias` (lower => more headroom), but make the UI “Headroom” slider intuitive by reversing range direction (RTL) and displaying `headroom = 1 - top_bias`.
 - Why: Improves UX without breaking the API contract; avoids confusing “slider moves the wrong way” behavior.
 - Evidence:
-  - UI: `static/index.html` (`topBias` range is RTL), `static/styles.css` (`.range--rtl`), `static/app.js` (inverted display value).
+  - UI: `src/ai_headshot_studio/static/index.html` (`topBias` range is RTL), `src/ai_headshot_studio/static/styles.css` (`.range--rtl`), `src/ai_headshot_studio/static/app.js` (inverted display value).
   - Docs: `README.md` (correct `top_bias` semantics).
 - Validation:
-  - `node --check static/app.js` (pass)
+  - `node --check src/ai_headshot_studio/static/app.js` (pass)
   - `make check` (pass) — `21 passed in 0.60s`
 - Commit: `52eda75e8a3857ed7370c353d3e3346d80c86182`.
 - Confidence: High.
@@ -143,11 +159,11 @@
 - Evidence:
   - Code: `src/ai_headshot_studio/app.py` (`api_detail`, structured `HTTPException.detail`), `src/ai_headshot_studio/processing.py` (input format allowlist).
   - Tests: `tests/test_api.py` (invalid bytes + GIF rejection, structured error assertions).
-  - UI: `static/app.js` (parses structured errors for `/api/process` and `/api/batch`).
+  - UI: `src/ai_headshot_studio/static/app.js` (parses structured errors for `/api/process` and `/api/batch`).
 - Validation:
   - `make check` (pass) — `19 passed`
   - `make smoke` (pass)
-  - `node --check static/app.js` (pass)
+  - `node --check src/ai_headshot_studio/static/app.js` (pass)
 - Commit: `6bfc8d337b18b2a4b9a20a4d11d8c98b0dbe8f19`.
 - Confidence: High.
 - Trust label: `verified-local`.
@@ -156,9 +172,9 @@
 - Decision: Validate profile bundle imports (basic schema checks + settings sanitization) and add an “overwrite conflicts” toggle; show a summary message after import.
 - Why: Bundles are a sharing surface; validation prevents broken settings from being stored, and conflict handling reduces friction when importing into an existing library.
 - Evidence:
-  - Code: `static/index.html` (`bundleOverwrite`), `static/app.js` (`sanitizeImportedSettings`, import summary, overwrite behavior).
+  - Code: `src/ai_headshot_studio/static/index.html` (`bundleOverwrite`), `src/ai_headshot_studio/static/app.js` (`sanitizeImportedSettings`, import summary, overwrite behavior).
 - Validation:
-  - `node --check static/app.js` (pass)
+  - `node --check src/ai_headshot_studio/static/app.js` (pass)
 - Commit: `6bfc8d337b18b2a4b9a20a4d11d8c98b0dbe8f19`.
 - Confidence: Medium-high.
 - Trust label: `verified-local`.
@@ -179,7 +195,7 @@
 - Decision: Add `POST /api/batch` to process multiple images with the same settings and return a single ZIP download; add a matching Batch panel in the studio UI.
 - Why: Batch export is a baseline expectation for background/retouch workflows and materially reduces time-to-value for users processing multiple photos.
 - Evidence:
-  - Code: `src/ai_headshot_studio/app.py` (`/api/batch`), `static/index.html`, `static/app.js`, `static/styles.css`.
+  - Code: `src/ai_headshot_studio/app.py` (`/api/batch`), `src/ai_headshot_studio/static/index.html`, `src/ai_headshot_studio/static/app.js`, `src/ai_headshot_studio/static/styles.css`.
   - Tests: `tests/test_api.py` (ZIP response + image assertions).
   - Smoke: `scripts/smoke_api.sh` (batch ZIP smoke path).
 - Validation:
@@ -196,8 +212,8 @@
 - Decision: Add a local “Profiles” library (named profiles with apply/delete) and a bundle JSON format for exporting/importing multiple profiles at once.
 - Why: Users often iterate toward a look and reuse it; named profiles + bundles reduce friction and enable sharing repeatable setups.
 - Evidence:
-  - Code: `static/index.html` (Profiles card), `static/app.js` (profiles storage + bundle import/export), `static/styles.css` (profiles UI styles).
-  - Validation: `node --check static/app.js` (pass)
+  - Code: `src/ai_headshot_studio/static/index.html` (Profiles card), `src/ai_headshot_studio/static/app.js` (profiles storage + bundle import/export), `src/ai_headshot_studio/static/styles.css` (profiles UI styles).
+  - Validation: `node --check src/ai_headshot_studio/static/app.js` (pass)
 - Commit: `e768501f47f76a9ac7e91c496f598bdd0ac7fbcb`.
 - Confidence: Medium-high.
 - Trust label: `verified-local`.
@@ -209,8 +225,8 @@
 - Decision: Expand `GET /api/health` to return structured diagnostics (`status`, `service`, `version`, limits, and background-removal availability) and consume it in the UI diagnostics panel.
 - Why: Production readiness needs fast local observability and a stable endpoint contract for smoke checks and frontend status visibility.
 - Evidence:
-  - Code: `src/ai_headshot_studio/app.py`, `static/index.html`, `static/app.js`, `static/styles.css`.
-  - Validation: `make check`, `make smoke`, `node --check static/app.js`.
+  - Code: `src/ai_headshot_studio/app.py`, `src/ai_headshot_studio/static/index.html`, `src/ai_headshot_studio/static/app.js`, `src/ai_headshot_studio/static/styles.css`.
+  - Validation: `make check`, `make smoke`, `node --check src/ai_headshot_studio/static/app.js`.
 - Commit: `f12aa32f6cf46e9367b20a824f7c3e0720607af8`.
 - Confidence: High.
 - Trust label: `verified-local`.
@@ -221,7 +237,7 @@
 - Decision: Add a debounced client-side estimate of output dimensions and approximate bytes before processing.
 - Why: Users frequently tune format/preset choices for constraints (LinkedIn, resume portals), so preflight estimate improves UX without server roundtrips.
 - Evidence:
-  - Code: `static/app.js` (`queueEstimate`, `estimateOutputGeometry`, `runEstimate`), `static/index.html` (`estimateMeta`).
+  - Code: `src/ai_headshot_studio/static/app.js` (`queueEstimate`, `estimateOutputGeometry`, `runEstimate`), `src/ai_headshot_studio/static/index.html` (`estimateMeta`).
   - Validation: `make check`, `make smoke`.
 - Commit: `f12aa32f6cf46e9367b20a824f7c3e0720607af8`.
 - Confidence: Medium-high (approximation by design).
@@ -259,6 +275,12 @@
 - `make bench` (pass) — `bench_processing: 1800x2400 preset=portrait-4x5 format=jpeg iters=12 p50_ms=88.4 p95_ms=90.6 bytes=24186`
 - `gh run list --limit 6 --branch main ...` (pass) — latest GitHub Actions runs show `success` for `docs: update tracker and project memory (cycle 1)`
 
+### 2026-02-10
+- `make check` (pass) — `33 passed in 0.73s`
+- `make smoke` (pass) — `smoke ok: 600x600 jpeg`; `batch smoke ok: 2x 600x600 jpeg in zip`
+- `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`
+- `.venv/bin/python -m zipfile -l dist/ai_headshot_studio-0.1.0-py3-none-any.whl | rg ai_headshot_studio/static` (pass) — includes packaged UI assets
+
 ### 2026-02-09
 - `make check` (pass) — `26 passed in 0.48s` (after optional face framing changes)
 - `make check` (pass) — `28 passed in 0.68s` (after batch CLI changes)
@@ -269,7 +291,7 @@
 - `gh run watch 21843209545 --exit-status` (pass) — GitHub Actions `CI` on `main` (cycle 5 tracker/memory docs push)
 - `gh run watch 21843209553 --exit-status` (pass) — GitHub Actions `Secret Scan` on `main` (cycle 5 tracker/memory docs push)
 - `make check` (pass) — `19 passed`
-- `node --check static/app.js` (pass)
+- `node --check src/ai_headshot_studio/static/app.js` (pass)
 - `make smoke` (pass) — output includes `smoke ok: 600x600 jpeg` and `batch smoke ok: 2x 600x600 jpeg in zip`
 - `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`
 - `docker build -t ai-headshot-studio:local .` (fail) — `docker` not installed in this environment

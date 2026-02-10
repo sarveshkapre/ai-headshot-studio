@@ -13,7 +13,7 @@
 ## Verification
 Commands run:
 - `make check`
-- `node --check static/app.js`
+- `node --check src/ai_headshot_studio/static/app.js`
 - `make build`
 - `make smoke`
 
@@ -33,7 +33,7 @@ Commands run:
 - `make -n check VENV=.ci-missing`
 - `make check`
 - `make build`
-- `node --check static/app.js`
+- `node --check src/ai_headshot_studio/static/app.js`
 - local smoke:
   - start API: `.venv/bin/python -m uvicorn ai_headshot_studio.app:app --port 8001`
   - `curl http://127.0.0.1:8001/api/health` returned `{"status":"ok"}`

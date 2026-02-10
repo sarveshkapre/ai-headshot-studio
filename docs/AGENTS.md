@@ -5,7 +5,7 @@
 - No authentication; no external storage; no remote APIs.
 
 ## Conventions
-- Python 3.11+, FastAPI backend, static frontend in `static/`.
+- Python 3.11+, FastAPI backend, static frontend in `src/ai_headshot_studio/static/`.
 - Keep UI minimal, keyboard-friendly, and accessible.
 - Prefer small, explicit functions with type hints.
 

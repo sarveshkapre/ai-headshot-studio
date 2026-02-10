@@ -15,7 +15,7 @@ FastAPI keeps the API surface explicit and easy to test, and a static UI keeps t
 ## Architecture
 - `src/ai_headshot_studio/app.py`: FastAPI app and routes
 - `src/ai_headshot_studio/processing.py`: image pipeline utilities
-- `static/`: UI assets
+- `src/ai_headshot_studio/static/`: UI assets
 - `tests/`: unit tests for crop presets and pipeline
 
 ## MVP Checklist

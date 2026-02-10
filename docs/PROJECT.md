@@ -23,6 +23,6 @@ make release
 - Python 3.11+
 
 ## Next 3 improvements
-1. Add a visual regression smoke script for `static/` workflow interactions (optional, fast, deterministic).
+1. Add a visual regression smoke script for `src/ai_headshot_studio/static/` workflow interactions (optional, fast, deterministic).
 2. Add skin-tone consistency check (warning-only) for retouch presets.
 3. Add print sheet layouts (2x2 / 3x3) for easy at-home prints.
