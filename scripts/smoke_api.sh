@@ -34,6 +34,11 @@ if ! grep -q '"status":"ok"' "${TMP_DIR}/health.json"; then
   exit 1
 fi
 
+# Static UI should be served (covers packaged/static layout + ASGI wiring).
+curl -fsS "http://127.0.0.1:${PORT}/" >"${TMP_DIR}/index.html"
+grep -qi "AI Headshot Studio" "${TMP_DIR}/index.html"
+curl -fsS "http://127.0.0.1:${PORT}/static/app.js" >"${TMP_DIR}/app.js"
+
 "${PYTHON_BIN}" - <<'PY' "${TMP_DIR}/input.png"
 import sys
 from PIL import Image
