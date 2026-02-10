@@ -1,4 +1,4 @@
-.PHONY: setup dev test lint typecheck build check smoke release
+.PHONY: setup dev test lint typecheck build check smoke bench release
 
 VENV ?= .venv
 BOOTSTRAP_PYTHON ?= python3
@@ -38,6 +38,9 @@ check: lint typecheck test
 
 smoke:
 	PYTHON_BIN="$(PYTHON)" ./scripts/smoke_api.sh
+
+bench:
+	$(PYTHON) ./scripts/bench_processing.py
 
 release: build
 	@echo "Release artifact built in dist/"
