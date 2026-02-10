@@ -257,6 +257,7 @@
 - `make check` (pass) — ruff, mypy, pytest (`33 passed in 0.92s`)
 - `make smoke` (pass) — `smoke ok: 600x600 jpeg`; `batch smoke ok: 2x 600x600 jpeg in zip`
 - `make bench` (pass) — `bench_processing: 1800x2400 preset=portrait-4x5 format=jpeg iters=12 p50_ms=88.4 p95_ms=90.6 bytes=24186`
+- `gh run list --limit 6 --branch main ...` (pass) — latest GitHub Actions runs show `success` for `docs: update tracker and project memory (cycle 1)`
 
 ### 2026-02-09
 - `make check` (pass) — `26 passed in 0.48s` (after optional face framing changes)
