@@ -2,6 +2,43 @@
 
 ## Decisions
 
+### 2026-02-10 | Harden background removal against `SystemExit` from `rembg`
+- Decision: Guard `rembg` import/runtime inside the processing pipeline against `SystemExit` and map failures to a stable `background_removal_unavailable` ProcessingError.
+- Why: Some `rembg` installs can terminate the process with `sys.exit(1)` when an ONNX backend is missing; requests must never crash the worker.
+- Evidence:
+  - Code: `src/ai_headshot_studio/processing.py` (`remove_background` uses `importlib.import_module` + `SystemExit` handling).
+  - Tests: `tests/test_processing.py` (covers `SystemExit` on import and on `remove()` call).
+- Validation:
+  - `make check` (pass) — `33 passed in 0.92s`
+  - `make smoke` (pass) — `smoke ok: 600x600 jpeg` / `batch smoke ok: 2x 600x600 jpeg in zip`
+- Commit: `602dd3b87da8520465b617241f469c9387f044b2`.
+- Confidence: High.
+- Trust label: `verified-local`.
+
+### 2026-02-10 | Add deterministic static UI contract tests for `getElementById(...)` IDs
+- Decision: Add a pytest contract test that asserts `static/app.js` `getElementById(...)` targets exist in `static/index.html` and that `index.html` has no duplicate IDs.
+- Why: This catches a common class of accidental frontend regressions without needing a browser runner.
+- Evidence:
+  - Tests: `tests/test_static_contract.py`.
+- Validation:
+  - `make check` (pass) — `33 passed in 0.92s`
+- Commit: `cba26ae7278ca07a3f5fbc2f601d2aa50e18608b`.
+- Confidence: High.
+- Trust label: `verified-local`.
+
+### 2026-02-10 | Add `make bench` processing micro-benchmark (local guardrail)
+- Decision: Add `scripts/bench_processing.py` and `make bench` to provide a quick local performance signal for the end-to-end processing pipeline.
+- Why: A tiny micro-benchmark gives a fast sanity check when iterating on the processing path, without turning perf into a flaky CI gate.
+- Evidence:
+  - Script: `scripts/bench_processing.py`.
+  - Build tooling: `Makefile` (`bench` target).
+  - Docs: `docs/PROJECT.md` (documents `make bench`).
+- Validation:
+  - `make bench` (pass) — `bench_processing: 1800x2400 ... p50_ms=88.4 ...`
+- Commit: `f0b7d2aaa2c5561dd47fa6dc6e785b0e1677ddf3`.
+- Confidence: Medium-high (numbers vary by machine; script is best-effort).
+- Trust label: `verified-local`.
+
 ### 2026-02-09 | Face-guided crop framing (optional OpenCV, safe fallback)
 - Decision: Add best-effort face-guided crop framing via an optional OpenCV Haar-cascade detector, and use it as a focus hint when alpha-mask foreground bounds are unavailable; expose availability via `/api/health` and surface it in the UI diagnostics panel.
 - Why: Crop presets are materially better when the subject’s face is used as the framing anchor, especially for non-transparent photos where alpha-mask guidance is absent.
@@ -217,6 +254,9 @@
   - Re-check all automation repos for remaining `codeql-action@v3` usage.
 
 ## Verification Evidence
+- `make check` (pass) — ruff, mypy, pytest (`33 passed in 0.92s`)
+- `make smoke` (pass) — `smoke ok: 600x600 jpeg`; `batch smoke ok: 2x 600x600 jpeg in zip`
+- `make bench` (pass) — `bench_processing: 1800x2400 preset=portrait-4x5 format=jpeg iters=12 p50_ms=88.4 p95_ms=90.6 bytes=24186`
 
 ### 2026-02-09
 - `make check` (pass) — `26 passed in 0.48s` (after optional face framing changes)

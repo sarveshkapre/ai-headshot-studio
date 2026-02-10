@@ -5,10 +5,16 @@
 - TODO/FIXME markers in code
 - Test and build failures
 - Gaps found during codebase exploration
-- GitHub issues by `sarveshkapre`/trusted bots (none open as of 2026-02-09)
+- GitHub issues by `sarveshkapre`/trusted bots (none open as of 2026-02-10)
 - GitHub Actions signals (`21579321573` historical failure root-caused; latest runs green)
 
 ## Candidate Features To Do
+### Selected (Cycle 1)
+- [x] P1: Harden background removal against `SystemExit` from `rembg` import/runtime and return a stable `background_removal_unavailable` error instead of crashing the request (add unit tests).
+- [x] P2: Add a deterministic static UI contract test (assert critical `static/index.html` element IDs + `static/app.js` lookups remain valid) to catch accidental frontend regressions in `make check`.
+- [x] P3: Add a processing pipeline micro-benchmark script (`make bench`) for a quick local perf guardrail (not a CI gate) and document it.
+- [x] P4: Refresh docs/trackers: dedupe backlog, record market scan links (untrusted), and keep `docs/PROJECT.md` “next improvements” aligned with reality.
+
 ### Selected (Cycle 5)
 - [x] P1: Face-guided crop framing (optional dependency) so framing is strong even without alpha masks; expose availability via `/api/health` and keep a safe fallback.
 - [x] P2: Add batch CLI helper (process a folder to `outputs/` + optional ZIP + `errors.json`) for non-UI workflows.
@@ -22,10 +28,17 @@
 
 ### Backlog
 - [ ] P3: Add visual regression smoke script for `static/` workflow interactions (optional, fast, deterministic).
-- [ ] P3: Add perf micro-benchmark for processing pipeline (guardrail against slow regressions).
-- [ ] P3: Add “profile suggestions” (auto-name saved profiles based on use-case/preset/style) to reduce friction.
+- [ ] P4: Add skin-tone consistency check (warning-only) for retouch presets.
+- [ ] P4: Add print sheet layouts (2x2 / 3x3) for easy at-home prints.
+- [ ] P4: Add on-device model selection (tradeoff UX: speed vs quality) for background removal.
 
 ## Implemented
+- [2026-02-10] Background removal no longer crashes on `SystemExit` from `rembg`; returns stable `background_removal_unavailable` error instead.
+  - Evidence: `src/ai_headshot_studio/processing.py` (`remove_background` import/runtime guards), `tests/test_processing.py` (SystemExit mapping tests).
+- [2026-02-10] Static UI contract tests ensure `static/app.js` `getElementById(...)` references exist in `static/index.html` and prevent duplicate IDs.
+  - Evidence: `tests/test_static_contract.py`.
+- [2026-02-10] Processing micro-benchmark script with `make bench` for local perf guardrails.
+  - Evidence: `scripts/bench_processing.py`, `Makefile`, `docs/PROJECT.md`.
 - [2026-02-09] Face-guided crop framing (best-effort, optional OpenCV) with `/api/health` diagnostics and UI surfacing.
   - Evidence: `src/ai_headshot_studio/processing.py` (`face_subject_bbox`, `focus_bbox`), `src/ai_headshot_studio/app.py` (`face_framing_diagnostics`), `static/index.html` + `static/app.js` (diagnostics row), `pyproject.toml` (optional `face` extra), `tests/test_processing.py` (focus propagation).
 - [2026-02-09] Batch CLI helper for processing folders to `outputs/` with optional ZIP and `errors.json` report.
@@ -52,6 +65,8 @@
   - Evidence: `src/ai_headshot_studio/app.py` (`POST /api/batch`), `tests/test_api.py` (ZIP assertions), `scripts/smoke_api.sh` (batch smoke).
 - [2026-02-09] Preset bundle library (saved named profiles) + bundle export/import (JSON).
   - Evidence: `static/index.html` (Profiles card), `static/app.js` (profile storage + bundle import/export), `static/styles.css` (profile UI styles).
+- [2026-02-09] Profile suggestions (auto-name on save when input is blank) based on use-case / preset / format.
+  - Evidence: `static/app.js` (`suggestProfileName`, `saveProfile()` uses suggestion), `static/index.html` (Profiles UI).
 - [2026-02-09] Structured runtime diagnostics endpoint for production visibility.
   - Evidence: `src/ai_headshot_studio/app.py` (`/api/health`, dependency-safe background-removal diagnostics).
 - [2026-02-09] Startup diagnostics panel in the web studio.
@@ -82,9 +97,15 @@
 - Differentiator: local-first privacy posture (no accounts/no third-party uploads), offline-ready static UI after setup.
 
 ## Gap Map (Cycle 5)
-- Missing: visual regression smoke script for `static/`, perf micro-benchmark guardrail, profile name suggestions in UI.
+- Missing: visual regression smoke script for `static/`.
 - Weak: face framing still best-effort (optional dependency); should remain conservative and always fall back cleanly.
 - Parity: WebP output option, batch ZIP workflow, diagnostics surfaced in UI.
+- Differentiator: local-only processing + optional local dependencies (no remote calls).
+
+## Gap Map (Cycle 1)
+- Missing: visual regression smoke script for `static/` workflow interactions (screenshots), skin-tone consistency check, print sheet layouts.
+- Weak: optional background removal dependencies are still best-effort across environments; keep error mapping stable and avoid crashes.
+- Parity: batch ZIP workflow, WebP output option, diagnostics surfaced in UI.
 - Differentiator: local-only processing + optional local dependencies (no remote calls).
 
 ## Insights
@@ -92,6 +113,7 @@
 - History URLs must be independent from the active preview URL; otherwise revoking preview URLs breaks older history downloads.
 - Preset portability is low-friction when JSON payloads include both style key and explicit slider values.
 - Health diagnostics should avoid importing `rembg` directly: `rembg` can call `sys.exit(1)` when ONNX runtime support is missing.
+- Background removal in the processing path must also guard against `SystemExit` from optional backends; map to `background_removal_unavailable` instead of terminating the worker.
 - A dedicated smoke command (`make smoke`) catches startup/runtime regressions earlier than unit tests alone.
 - GitHub Actions annotations can surface near-term maintenance debt before it becomes a failing check.
 - `top_bias` is easier to reason about as “crop shift” while the UI can show an inverted “Headroom” value (headroom = `1 - top_bias`).
@@ -102,6 +124,7 @@
 - Market baseline: common web tools cap image size (example: Canva Background Remover works under ~9MB and downscales to 10MP).
 - Market baseline sources (untrusted): PhotoRoom batch format options + naming (`https://help.photoroom.com/en/articles/12137322-edit-multiple-photos-with-the-batch-feature-web-app`), PhotoRoom “original background” template (`https://help.photoroom.com/en/articles/12818584-keep-the-original-background-when-using-the-batch-feature`), remove.bg upload limits (`https://www.remove.bg/it/help/a/what-is-the-maximum-image-resolution-file-size`), Canva background remover limits (`https://www.canva.com/learn/background-remover/`).
 - Market baseline sources (untrusted): remove.bg API format options + crop/position controls (`https://www.remove.bg/api`), remove.bg blog (ROI/crop/position knobs) (`https://www.remove.bg/et/b/mastering-remove-bg-api`), PFPMaker headshot generator positioning (background/style variants) (`https://pfpmaker.com/headshot-generator`).
+- Market baseline sources (untrusted, refreshed 2026-02-10): remove.bg API result customization (`https://www.remove.bg/help/a/how-can-i-customize-my-api-results.zst`), PhotoRoom batch docs (`https://help.photoroom.com/en/articles/12137322-edit-multiple-images-at-once-with-the-batch-feature-web-app`).
 
 ## Notes
 - This file is maintained by the autonomous clone loop.
