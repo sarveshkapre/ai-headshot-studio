@@ -42,6 +42,17 @@
 - Confidence: High.
 - Trust label: `verified-local`.
 
+### 2026-02-10 | Extend `make smoke` to cover the UI
+- Decision: Make `scripts/smoke_api.sh` verify the static UI is served by probing `GET /` and `GET /static/app.js` after the health check.
+- Why: Catches packaging/static-wiring regressions (missing static dir, mis-mounted assets) without requiring a browser runner.
+- Evidence:
+  - Script: `scripts/smoke_api.sh`.
+- Validation:
+  - `make smoke` (pass) — `smoke ok: 600x600 jpeg` / `batch smoke ok: 2x 600x600 jpeg in zip`
+- Commit: `359d016732edfa60c941f92dc6c9b24c54074cea`.
+- Confidence: High.
+- Trust label: `verified-local`.
+
 ### 2026-02-10 | Add `make bench` processing micro-benchmark (local guardrail)
 - Decision: Add `scripts/bench_processing.py` and `make bench` to provide a quick local performance signal for the end-to-end processing pipeline.
 - Why: A tiny micro-benchmark gives a fast sanity check when iterating on the processing path, without turning perf into a flaky CI gate.
