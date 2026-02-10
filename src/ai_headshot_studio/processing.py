@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import io
 import math
 import string
@@ -82,13 +83,34 @@ def to_rgba(image: Image.Image) -> Image.Image:
 
 def remove_background(image: Image.Image) -> Image.Image:
     try:
-        from rembg import remove
+        rembg = importlib.import_module("rembg")
+        remove = getattr(rembg, "remove", None)
+        if remove is None:
+            raise ProcessingError(
+                "Background removal model unavailable.", code="background_removal_unavailable"
+            )
+    except SystemExit as exc:  # pragma: no cover - runtime dependency
+        # Some `rembg` installs call `sys.exit(1)` when an ONNX backend is missing.
+        raise ProcessingError(
+            "Background removal model unavailable.", code="background_removal_unavailable"
+        ) from exc
+    except ProcessingError:
+        raise
     except Exception as exc:  # pragma: no cover - runtime dependency
         raise ProcessingError(
             "Background removal model unavailable.", code="background_removal_unavailable"
         ) from exc
 
-    result = remove(image)
+    try:
+        result = remove(image)
+    except SystemExit as exc:  # pragma: no cover - runtime dependency
+        raise ProcessingError(
+            "Background removal model unavailable.", code="background_removal_unavailable"
+        ) from exc
+    except Exception as exc:  # pragma: no cover - runtime dependency
+        raise ProcessingError(
+            "Background removal model unavailable.", code="background_removal_unavailable"
+        ) from exc
     if isinstance(result, Image.Image):
         return result
     return Image.open(io.BytesIO(result))

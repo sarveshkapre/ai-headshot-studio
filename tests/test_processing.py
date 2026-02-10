@@ -258,6 +258,66 @@ def test_available_styles_include_parameters() -> None:
         assert key in classic
 
 
+def test_remove_background_maps_system_exit_on_import(monkeypatch: pytest.MonkeyPatch) -> None:
+    import ai_headshot_studio.processing as processing
+
+    def boom(_name: str):
+        raise SystemExit(1)
+
+    monkeypatch.setattr(processing.importlib, "import_module", boom)
+
+    data = make_image(800, 1000)
+    req = ProcessRequest(
+        remove_bg=True,
+        background="white",
+        background_hex=None,
+        preset="portrait-4x5",
+        style=None,
+        top_bias=0.2,
+        brightness=1.0,
+        contrast=1.0,
+        color=1.0,
+        sharpness=1.0,
+        soften=0.0,
+        jpeg_quality=92,
+        output_format="png",
+    )
+    with pytest.raises(ProcessingError) as exc:
+        process_image(data, req)
+    assert exc.value.code == "background_removal_unavailable"
+
+
+def test_remove_background_maps_system_exit_on_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    import ai_headshot_studio.processing as processing
+
+    class FakeRembg:
+        @staticmethod
+        def remove(_image: Image.Image):
+            raise SystemExit(1)
+
+    monkeypatch.setattr(processing.importlib, "import_module", lambda _name: FakeRembg())
+
+    data = make_image(800, 1000)
+    req = ProcessRequest(
+        remove_bg=True,
+        background="white",
+        background_hex=None,
+        preset="portrait-4x5",
+        style=None,
+        top_bias=0.2,
+        brightness=1.0,
+        contrast=1.0,
+        color=1.0,
+        sharpness=1.0,
+        soften=0.0,
+        jpeg_quality=92,
+        output_format="png",
+    )
+    with pytest.raises(ProcessingError) as exc:
+        process_image(data, req)
+    assert exc.value.code == "background_removal_unavailable"
+
+
 def test_build_output_headers() -> None:
     image = Image.new("RGB", (123, 456))
     headers = build_output_headers(image, output_format="png", elapsed_ms=42, payload_bytes=1024)
