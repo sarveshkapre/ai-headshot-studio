@@ -24,5 +24,5 @@ make release
 
 ## Next 3 improvements
 1. Add a visual regression smoke script for `src/ai_headshot_studio/static/` workflow interactions (optional, fast, deterministic).
-2. Add skin-tone consistency check (warning-only) for retouch presets.
-3. Add print sheet layouts (2x2 / 3x3) for easy at-home prints.
+2. Add batch warning manifest details beyond `errors.json` (non-fatal warning counts + per-item warnings).
+3. Add on-device model selection (tradeoff UX: speed vs quality) for background removal.

@@ -14,6 +14,7 @@
 - Cancel button to abort in-flight processing requests; client-side file validation (type/size).
 - Batch processing endpoint + UI (multi-upload to a single ZIP download).
 - Batch “continue on error” mode for `/api/batch` (ZIP includes an `errors.json` report for per-item failures).
+- Batch `continue_on_error` toggle in the UI so partial failures can still produce a ZIP + report.
 - Batch total upload size cap (sum of bytes across uploaded images) to keep memory bounded.
 - Saved profiles library (named profiles) plus export/import preset bundles (JSON).
 - Headroom control (crop top-bias) for smarter framing.
@@ -35,6 +36,8 @@
 - API contract coverage for `/api/health`, `/api/presets`, and `/api/process`.
 - `make smoke` target for local end-to-end health/process verification.
 - Batch CLI helper (`scripts/batch_cli.py`) for processing folders outside the UI.
+- Print sheet layouts (`2x2`, `3x3`) with one-click client-side sheet downloads.
+- Warning-only skin-tone consistency checks for retouch-heavy outputs (`X-Processing-Warnings` headers + preview warning text).
 
 ### Changed
 - Images are auto-oriented using EXIF metadata so previews/crops match how the photo was taken.

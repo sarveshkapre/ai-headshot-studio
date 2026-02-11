@@ -8,6 +8,6 @@
 - Preset sharing improvements (bundle validation + conflict handling UX) ✅
 
 ## Later
-- Skin-tone consistency check
-- Print sheet layouts
+- Skin-tone consistency check ✅
+- Print sheet layouts ✅
 - On-device model selection

@@ -47,8 +47,11 @@ More: see `docs/PROJECT.md`.
  - Added a quick reset for crop + export controls.
  - Added recent export history (last 3) with download shortcuts.
 - Added a keyboard shortcuts help modal.
+- Added warning-only skin-tone consistency detection for retouch-heavy outputs (surfaced via `X-Processing-Warnings` headers and preview warning text).
+- Added print sheet layouts (`2x2`, `3x3`) with one-click sheet download in the studio UI.
+- Added a batch `continue_on_error` toggle in the UI so partial failures can still produce a ZIP + `errors.json`.
 
 ## Next to ship
-- Face-guided crop framing (lightweight detector).
-- Add batch CLI helper (process a folder to outputs/ + optional ZIP).
 - Add visual regression smoke script for the `src/ai_headshot_studio/static/` workflow (fast and deterministic).
+- Add richer non-fatal warning manifests for batch outputs.
+- Add on-device model selection (speed vs quality) for background removal.

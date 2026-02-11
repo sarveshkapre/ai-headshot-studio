@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import zipfile
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 from PIL import Image
@@ -143,6 +144,32 @@ def test_process_rejects_unsupported_image_format() -> None:
     assert response.status_code == 400
     detail = response.json()["detail"]
     assert detail["code"] == "unsupported_image_format"
+
+
+def test_process_includes_warning_headers_when_present(monkeypatch) -> None:
+    payload = make_image()
+
+    def fake_process_with_warnings(_data, _req):
+        image = Image.new("RGB", (600, 600), (120, 140, 160))
+        warning = SimpleNamespace(code="skin_tone_shift_warning")
+        return image, [warning]
+
+    import ai_headshot_studio.app as app_module
+
+    monkeypatch.setattr(app_module, "process_image_with_warnings", fake_process_with_warnings)
+    response = client.post(
+        "/api/process",
+        files={"image": ("input.png", payload, "image/png")},
+        data={
+            "remove_bg": "false",
+            "background": "white",
+            "preset": "passport-2x2",
+            "format": "jpeg",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["x-processing-warnings"] == "skin_tone_shift_warning"
+    assert response.headers["x-processing-warnings-count"] == "1"
 
 
 def test_batch_returns_zip_with_processed_images() -> None:

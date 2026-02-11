@@ -5,7 +5,7 @@ import re
 import tempfile
 import time
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from datetime import UTC, datetime
 from functools import lru_cache
 from importlib import metadata, util
@@ -27,6 +27,7 @@ from ai_headshot_studio.processing import (
     available_presets,
     available_styles,
     process_image,
+    process_image_with_warnings,
     to_bytes,
 )
 
@@ -99,6 +100,20 @@ def build_output_headers(
         "X-Processing-Ms": str(max(0, elapsed_ms)),
         "X-Output-Bytes": str(max(0, payload_bytes)),
     }
+
+
+def add_warning_headers(headers: dict[str, str], warnings: Sequence[object]) -> dict[str, str]:
+    codes: list[str] = []
+    for item in warnings:
+        code = getattr(item, "code", None)
+        if isinstance(code, str) and code:
+            codes.append(code)
+    if not codes:
+        return headers
+    merged = dict(headers)
+    merged["X-Processing-Warnings"] = ",".join(codes)
+    merged["X-Processing-Warnings-Count"] = str(len(codes))
+    return merged
 
 
 async def read_upload_limited(
@@ -253,7 +268,7 @@ async def process(
     )
     try:
         start = time.perf_counter()
-        result = process_image(data, req)
+        result, warnings = process_image_with_warnings(data, req)
         payload = to_bytes(result, output_format, req.jpeg_quality)
     except ProcessingError as exc:
         raise HTTPException(
@@ -268,10 +283,12 @@ async def process(
     }
     media_type = media_type_map.get(output_format, "application/octet-stream")
     elapsed_ms = int((time.perf_counter() - start) * 1000)
+    headers = build_output_headers(result, output_format, elapsed_ms, len(payload))
+    headers = add_warning_headers(headers, warnings)
     return StreamingResponse(
         iter([payload]),
         media_type=media_type,
-        headers=build_output_headers(result, output_format, elapsed_ms, len(payload)),
+        headers=headers,
     )
 
 

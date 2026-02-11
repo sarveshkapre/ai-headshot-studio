@@ -7,6 +7,7 @@ const state = {
   batchController: null,
   debounce: null,
   processedUrl: null,
+  processedBlob: null,
   batchZipUrl: null,
   toastTimer: null,
   saveTimer: null,
@@ -26,6 +27,7 @@ const elements = {
   dropzone: document.getElementById("dropzone"),
   batchInput: document.getElementById("batchInput"),
   batchFolder: document.getElementById("batchFolder"),
+  batchContinueOnError: document.getElementById("batchContinueOnError"),
   batchCount: document.getElementById("batchCount"),
   batchLimits: document.getElementById("batchLimits"),
   batchStatus: document.getElementById("batchStatus"),
@@ -41,11 +43,13 @@ const elements = {
   resetBackground: document.getElementById("resetBackground"),
   preset: document.getElementById("preset"),
   format: document.getElementById("format"),
+  printLayout: document.getElementById("printLayout"),
   resetCropExport: document.getElementById("resetCropExport"),
   autoUpdate: document.getElementById("autoUpdate"),
   processBtn: document.getElementById("processBtn"),
   downloadBtn: document.getElementById("downloadBtn"),
   cancelBtn: document.getElementById("cancelBtn"),
+  sheetDownloadBtn: document.getElementById("sheetDownloadBtn"),
   exportPresetBtn: document.getElementById("exportPresetBtn"),
   importPresetBtn: document.getElementById("importPresetBtn"),
   importPresetInput: document.getElementById("importPresetInput"),
@@ -66,6 +70,7 @@ const elements = {
   styleGrid: document.getElementById("styleGrid"),
   originalMeta: document.getElementById("originalMeta"),
   processedMeta: document.getElementById("processedMeta"),
+  processedWarning: document.getElementById("processedWarning"),
   toggleZoom: document.getElementById("toggleZoom"),
   toggleGuide: document.getElementById("toggleGuide"),
   frameGuide: document.getElementById("frameGuide"),
@@ -121,6 +126,11 @@ function setStatusLoading(isLoading) {
   elements.cancelBtn.hidden = !isLoading;
   elements.processBtn.disabled = isLoading;
   elements.downloadBtn.disabled = isLoading || !state.processedUrl;
+  if (isLoading) {
+    elements.sheetDownloadBtn.disabled = true;
+  } else {
+    updateSheetButtonState();
+  }
 }
 
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
@@ -132,6 +142,32 @@ state.limits = {
   maxBatchImages: DEFAULT_MAX_BATCH_IMAGES,
   maxBatchTotalBytes: DEFAULT_MAX_BATCH_TOTAL_BYTES,
 };
+
+function setProcessedWarning(message) {
+  if (!message) {
+    elements.processedWarning.hidden = true;
+    elements.processedWarning.textContent = "";
+    return;
+  }
+  elements.processedWarning.hidden = false;
+  elements.processedWarning.textContent = message;
+}
+
+function updateSheetButtonState() {
+  const hasLayout = Boolean(sheetLayoutConfig(elements.printLayout.value));
+  const hasOutput = Boolean(state.processedBlob);
+  elements.sheetDownloadBtn.disabled = !(hasLayout && hasOutput && !state.controller);
+}
+
+function sheetLayoutConfig(layout) {
+  if (layout === "2x2") {
+    return { rows: 2, cols: 2 };
+  }
+  if (layout === "3x3") {
+    return { rows: 3, cols: 3 };
+  }
+  return null;
+}
 
 const STORAGE_KEY = "ai-headshot-studio:settings:v1";
 const ZOOM_KEY = "ai-headshot-studio:preview-zoom:v1";
@@ -386,10 +422,12 @@ function collectCurrentSettings() {
     removeBg: elements.removeBg.checked,
     background: elements.background.value,
     backgroundHex: elements.backgroundHex.value,
+    batchContinueOnError: elements.batchContinueOnError.checked,
     preset: elements.preset.value,
     topBias: Number(elements.cropSliders.topBias.value),
     format: elements.format.value,
     jpegQuality: Number(elements.exportSliders.jpegQuality.value),
+    printLayout: elements.printLayout.value,
     autoUpdate: elements.autoUpdate.checked,
     style: state.style,
     useCase: state.useCase,
@@ -516,6 +554,9 @@ function applySavedSettings() {
   if (typeof state.saved.backgroundHex === "string") {
     elements.backgroundHex.value = state.saved.backgroundHex;
   }
+  if (typeof state.saved.batchContinueOnError === "boolean") {
+    elements.batchContinueOnError.checked = state.saved.batchContinueOnError;
+  }
   if (typeof state.saved.topBias === "number" && Number.isFinite(state.saved.topBias)) {
     elements.cropSliders.topBias.value = String(state.saved.topBias);
   }
@@ -524,6 +565,11 @@ function applySavedSettings() {
   }
   if (typeof state.saved.format === "string") {
     elements.format.value = state.saved.format;
+  }
+  if (typeof state.saved.printLayout === "string") {
+    if (state.saved.printLayout === "none" || state.saved.printLayout === "2x2" || state.saved.printLayout === "3x3") {
+      elements.printLayout.value = state.saved.printLayout;
+    }
   }
   if (typeof state.saved.autoUpdate === "boolean") {
     elements.autoUpdate.checked = state.saved.autoUpdate;
@@ -759,6 +805,9 @@ function sanitizeImportedSettings(settings) {
   if (typeof settings.backgroundHex === "string") {
     sanitized.backgroundHex = settings.backgroundHex;
   }
+  if (typeof settings.batchContinueOnError === "boolean") {
+    sanitized.batchContinueOnError = settings.batchContinueOnError;
+  }
   if (typeof settings.preset === "string") {
     sanitized.preset = settings.preset;
   }
@@ -769,6 +818,9 @@ function sanitizeImportedSettings(settings) {
     sanitized.format = settings.format;
   }
   sanitized.jpegQuality = Math.round(clampNumber(settings.jpegQuality, 60, 100, 92));
+  if (settings.printLayout === "none" || settings.printLayout === "2x2" || settings.printLayout === "3x3") {
+    sanitized.printLayout = settings.printLayout;
+  }
 
   if (typeof settings.autoUpdate === "boolean") {
     sanitized.autoUpdate = settings.autoUpdate;
@@ -938,6 +990,9 @@ function applyImportedPresetSettings(settings) {
   if (typeof settings.backgroundHex === "string") {
     elements.backgroundHex.value = settings.backgroundHex;
   }
+  if (typeof settings.batchContinueOnError === "boolean") {
+    elements.batchContinueOnError.checked = settings.batchContinueOnError;
+  }
 
   if (typeof settings.preset === "string") {
     const hasPreset = [...elements.preset.options].some((option) => option.value === settings.preset);
@@ -952,6 +1007,9 @@ function applyImportedPresetSettings(settings) {
 
   if (settings.format === "png" || settings.format === "jpeg" || settings.format === "webp") {
     elements.format.value = settings.format;
+  }
+  if (settings.printLayout === "none" || settings.printLayout === "2x2" || settings.printLayout === "3x3") {
+    elements.printLayout.value = settings.printLayout;
   }
   elements.exportSliders.jpegQuality.value = String(
     Math.round(
@@ -996,6 +1054,7 @@ function applyImportedPresetSettings(settings) {
   updateSliderValues();
   elements.exportSliders.jpegQuality.disabled =
     elements.format.value !== "jpeg" && elements.format.value !== "webp";
+  updateSheetButtonState();
   queueProcess(true);
   scheduleSaveSettings();
 }
@@ -1170,6 +1229,7 @@ function setFile(file) {
   elements.downloadBtn.disabled = true;
   hideToast();
   elements.processedMeta.textContent = "";
+  setProcessedWarning("");
   elements.originalEmpty.hidden = true;
   elements.processedEmpty.hidden = false;
   if (state.processedUrl) {
@@ -1181,6 +1241,8 @@ function setFile(file) {
     revokeObjectUrl(state.processedUrl);
     state.processedUrl = null;
   }
+  state.processedBlob = null;
+  updateSheetButtonState();
   elements.processedPreview.removeAttribute("src");
   const reader = new FileReader();
   reader.onload = () => {
@@ -1397,6 +1459,7 @@ function setBatchLoading(isLoading) {
   elements.batchDownloadBtn.disabled = isLoading || !state.batchZipUrl;
   elements.batchInput.disabled = isLoading;
   elements.batchFolder.disabled = isLoading;
+  elements.batchContinueOnError.disabled = isLoading;
 }
 
 function revokeBatchZipUrl() {
@@ -1522,6 +1585,7 @@ function formDataForBatch() {
   if (folder) {
     data.append("folder", folder);
   }
+  data.append("continue_on_error", elements.batchContinueOnError.checked ? "true" : "false");
   return data;
 }
 
@@ -1539,6 +1603,125 @@ function downloadBatchZip() {
   link.click();
 }
 
+function parseWarningCodes(headerValue) {
+  if (typeof headerValue !== "string" || !headerValue.trim()) {
+    return [];
+  }
+  return headerValue
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function warningMessageForCodes(codes) {
+  if (!Array.isArray(codes) || !codes.length) return "";
+  if (codes.includes("skin_tone_shift_warning")) {
+    return "Warning: Retouch settings may be shifting skin tone.";
+  }
+  return `Warning: ${codes.join(", ")}`;
+}
+
+function loadImageFromBlob(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("image-load-failed"));
+    };
+    image.src = url;
+  });
+}
+
+async function createPrintSheetBlob(layout, format, qualityValue) {
+  const config = sheetLayoutConfig(layout);
+  if (!config || !state.processedBlob) {
+    throw new Error("sheet-not-ready");
+  }
+
+  const source = await loadImageFromBlob(state.processedBlob);
+  const sourceWidth = Math.max(1, source.naturalWidth || source.width);
+  const sourceHeight = Math.max(1, source.naturalHeight || source.height);
+  const margin = 36;
+  const gap = 24;
+  const sheetWidth = sourceWidth * config.cols + gap * (config.cols - 1) + margin * 2;
+  const sheetHeight = sourceHeight * config.rows + gap * (config.rows - 1) + margin * 2;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = sheetWidth;
+  canvas.height = sheetHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("canvas-unavailable");
+  }
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, sheetWidth, sheetHeight);
+
+  for (let row = 0; row < config.rows; row += 1) {
+    for (let col = 0; col < config.cols; col += 1) {
+      const x = margin + col * (sourceWidth + gap);
+      const y = margin + row * (sourceHeight + gap);
+      ctx.drawImage(source, x, y, sourceWidth, sourceHeight);
+    }
+  }
+
+  const mimeMap = { png: "image/png", jpeg: "image/jpeg", webp: "image/webp" };
+  const mime = mimeMap[format] || "image/png";
+  const quality = clampNumber(qualityValue, 60, 100, 92) / 100;
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+        reject(new Error("sheet-export-failed"));
+      },
+      mime,
+      quality,
+    );
+  });
+}
+
+async function downloadPrintSheet() {
+  const layout = elements.printLayout.value;
+  const config = sheetLayoutConfig(layout);
+  if (!config) {
+    showToast("Choose a print sheet layout first.");
+    return;
+  }
+  if (!state.processedBlob) {
+    showToast("Process an image before downloading a print sheet.");
+    return;
+  }
+
+  elements.sheetDownloadBtn.disabled = true;
+  try {
+    const blob = await createPrintSheetBlob(
+      layout,
+      elements.format.value,
+      Number(elements.exportSliders.jpegQuality.value),
+    );
+    const extMap = { png: "png", jpeg: "jpg", webp: "webp" };
+    const ext = extMap[elements.format.value] || "png";
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `headshot-sheet-${layout}.${ext}`;
+    link.click();
+    setTimeout(() => revokeObjectUrl(link.href), 0);
+    showToast(`Print sheet (${layout}) downloaded.`);
+  } catch {
+    showToast("Could not generate print sheet.");
+  } finally {
+    updateSheetButtonState();
+  }
+}
+
 async function processBatch() {
   if (!state.batchFiles.length) {
     showToast("Select images for batch processing first.");
@@ -1551,6 +1734,7 @@ async function processBatch() {
   }
   state.batchController = new AbortController();
   setBatchLoading(true);
+  const continueOnError = elements.batchContinueOnError.checked;
   elements.batchStatus.textContent = `Processing ${state.batchFiles.length} image(s)...`;
 
   try {
@@ -1590,7 +1774,14 @@ async function processBatch() {
       showToast("Batch canceled.");
     } else {
       elements.batchStatus.textContent = "Batch failed.";
-      showToast(error.message || "Batch failed.");
+      if (continueOnError) {
+        showToast(error.message || "Batch failed.");
+      } else {
+        showToast(
+          (error.message || "Batch failed.") +
+            " You can enable “Continue on item errors” to keep successful outputs.",
+        );
+      }
     }
   } finally {
     state.batchController = null;
@@ -1610,6 +1801,7 @@ async function processImage() {
     state.controller.abort();
   }
   state.controller = new AbortController();
+  setProcessedWarning("");
   setStatusLoading(true);
 
   try {
@@ -1629,6 +1821,8 @@ async function processImage() {
     const fmt = response.headers.get("x-output-format");
     const ms = response.headers.get("x-processing-ms");
     const bytes = response.headers.get("x-output-bytes");
+    const warningCodes = parseWarningCodes(response.headers.get("x-processing-warnings"));
+    setProcessedWarning(warningMessageForCodes(warningCodes));
     if (width && height) {
       const suffix = [];
       if (fmt) suffix.push(fmt.toUpperCase());
@@ -1650,6 +1844,7 @@ async function processImage() {
       state.processedUrl = null;
     }
     const blob = await response.blob();
+    state.processedBlob = blob;
     state.processedUrl = URL.createObjectURL(blob);
     elements.processedPreview.src = state.processedUrl;
     elements.processedEmpty.hidden = true;
@@ -1683,6 +1878,7 @@ async function processImage() {
       revokeObjectUrl(removed?.url);
     }
     renderHistory();
+    updateSheetButtonState();
     elements.downloadBtn.onclick = () => {
       const link = document.createElement("a");
       link.href = state.processedUrl;
@@ -1724,6 +1920,9 @@ function bindEvents() {
       state.batchController = null;
       setBatchLoading(false);
     }
+  });
+  elements.batchContinueOnError.addEventListener("change", () => {
+    scheduleSaveSettings();
   });
 
   elements.useCaseButtons.forEach((button) => {
@@ -1825,6 +2024,11 @@ function bindEvents() {
     queueProcess();
     elements.exportSliders.jpegQuality.disabled =
       elements.format.value !== "jpeg" && elements.format.value !== "webp";
+    updateSheetButtonState();
+    scheduleSaveSettings();
+  });
+  elements.printLayout.addEventListener("change", () => {
+    updateSheetButtonState();
     scheduleSaveSettings();
   });
   elements.autoUpdate.addEventListener("change", () => {
@@ -1833,6 +2037,9 @@ function bindEvents() {
     scheduleSaveSettings();
   });
   elements.processBtn.addEventListener("click", () => processImage());
+  elements.sheetDownloadBtn.addEventListener("click", () => {
+    downloadPrintSheet();
+  });
   elements.exportPresetBtn.addEventListener("click", () => {
     exportPreset();
   });
@@ -1921,15 +2128,18 @@ function bindEvents() {
       state.processedUrl = null;
       elements.processedPreview.removeAttribute("src");
     }
+    state.processedBlob = null;
     state.file = null;
     elements.fileInput.value = "";
     elements.removeBg.checked = false;
     elements.background.value = "white";
     elements.backgroundHex.value = "#ffffff";
+    elements.batchContinueOnError.checked = true;
     elements.preset.value = "portrait-4x5";
     elements.cropSliders.topBias.value = "0.2";
     elements.format.value = "png";
     elements.exportSliders.jpegQuality.value = "92";
+    elements.printLayout.value = "none";
     elements.autoUpdate.checked = true;
     setUseCaseSelection(null);
     enforceCompatibleOptions();
@@ -1942,8 +2152,10 @@ function bindEvents() {
     elements.compareOriginal.removeAttribute("src");
     elements.originalMeta.textContent = "";
     elements.processedMeta.textContent = "";
+    setProcessedWarning("");
     elements.originalEmpty.hidden = false;
     elements.processedEmpty.hidden = false;
+    updateSheetButtonState();
     setEstimateMeta("--");
     showToast("Studio reset.");
   });
@@ -1952,9 +2164,11 @@ function bindEvents() {
     elements.cropSliders.topBias.value = "0.2";
     elements.format.value = "png";
     elements.exportSliders.jpegQuality.value = "92";
+    elements.printLayout.value = "none";
     elements.exportSliders.jpegQuality.disabled = true;
     maybeClearUseCase();
     updateSliderValues();
+    updateSheetButtonState();
     queueProcess();
     scheduleSaveSettings();
     showToast("Crop/export reset.");
@@ -2051,6 +2265,7 @@ function bindEvents() {
       revokeObjectUrl(state.processedUrl);
       state.processedUrl = null;
     }
+    state.processedBlob = null;
     revokeBatchZipUrl();
     clearHistory();
   });
@@ -2063,11 +2278,13 @@ renderProfiles();
 applySavedSettings();
 updateBackgroundCustomVisibility();
 updateBackgroundSwatch();
+setProcessedWarning("");
 setEstimateMeta("--");
 updateBatchLimitsHint();
 updateBatchSummary();
 renderBatchList();
 setBatchLoading(false);
+updateSheetButtonState();
 elements.exportSliders.jpegQuality.disabled =
   elements.format.value !== "jpeg" && elements.format.value !== "webp";
 setZoomMode(readZoomMode());

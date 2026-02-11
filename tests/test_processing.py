@@ -13,9 +13,11 @@ from ai_headshot_studio.processing import (
     available_styles,
     crop_to_aspect,
     crop_to_aspect_focus,
+    detect_skin_tone_warning,
     focus_bbox,
     load_image,
     process_image,
+    process_image_with_warnings,
     to_bytes,
 )
 
@@ -316,6 +318,40 @@ def test_remove_background_maps_system_exit_on_call(monkeypatch: pytest.MonkeyPa
     with pytest.raises(ProcessingError) as exc:
         process_image(data, req)
     assert exc.value.code == "background_removal_unavailable"
+
+
+def test_detect_skin_tone_warning_emits_warning_for_large_chroma_shift() -> None:
+    before = Image.new("RGB", (240, 240), (188, 144, 124))
+    after = Image.new("RGB", (240, 240), (120, 166, 220))
+    warning = detect_skin_tone_warning(before, after, focus_bbox=(0, 0, 240, 240))
+    assert warning is not None
+    assert warning.code == "skin_tone_shift_warning"
+
+
+def test_process_image_with_warnings_reports_skin_tone_warning_for_aggressive_color() -> None:
+    image = Image.new("RGB", (800, 1200), (188, 144, 124))
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    data = buffer.getvalue()
+
+    req = ProcessRequest(
+        remove_bg=False,
+        background="white",
+        background_hex=None,
+        preset="portrait-4x5",
+        style=None,
+        top_bias=0.2,
+        brightness=1.0,
+        contrast=1.45,
+        color=1.5,
+        sharpness=1.0,
+        soften=0.0,
+        jpeg_quality=92,
+        output_format="png",
+    )
+
+    _result, warnings = process_image_with_warnings(data, req)
+    assert any(item.code == "skin_tone_shift_warning" for item in warnings)
 
 
 def test_build_output_headers() -> None:

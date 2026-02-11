@@ -403,6 +403,12 @@ input[type="range"] {
   color: rgba(170, 179, 210, 0.9);
 }
 
+.preview__warning {
+  min-height: 1.1em;
+  font-size: 0.78rem;
+  color: #ffd196;
+}
+
 .preview img {
   width: 100%;
   height: auto;

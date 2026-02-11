@@ -48,6 +48,16 @@
             />
           </div>
           <div id="batchStatus" class="hint">Applies the current studio settings to every selected image.</div>
+          <div class="toggle-row">
+            <label class="switch">
+              <input id="batchContinueOnError" type="checkbox" checked />
+              <span class="slider"></span>
+            </label>
+            <div>
+              <div class="toggle-label">Continue on item errors</div>
+              <small>Generates a ZIP with `errors.json` instead of failing the full batch.</small>
+            </div>
+          </div>
           <div id="batchList" class="batch-list" aria-live="polite"></div>
           <div class="action-row">
             <button id="batchProcessBtn" class="btn" type="button" disabled>Process batch</button>
@@ -172,6 +182,14 @@
             <label for="jpegQuality">Quality <span id="jpegQualityValue">92</span></label>
             <input id="jpegQuality" type="range" min="60" max="100" step="1" value="92" />
           </div>
+          <div class="select-row">
+            <label for="printLayout">Print sheet</label>
+            <select id="printLayout">
+              <option value="none">None</option>
+              <option value="2x2">2 x 2 (4 copies)</option>
+              <option value="3x3">3 x 3 (9 copies)</option>
+            </select>
+          </div>
           <div id="estimateMeta" class="estimate-meta" aria-live="polite">Estimated output: --</div>
           <small class="hint">Estimate is approximate and updates before processing.</small>
           <div class="toggle-row">
@@ -188,6 +206,11 @@
             <button id="processBtn" class="btn">Process</button>
             <button id="downloadBtn" class="btn btn--ghost" disabled>Download</button>
             <button id="cancelBtn" class="btn btn--ghost" type="button" hidden>Cancel</button>
+          </div>
+          <div class="action-row action-row--compact">
+            <button id="sheetDownloadBtn" class="btn btn--ghost btn--small" type="button" disabled>
+              Download sheet
+            </button>
           </div>
           <div class="action-row action-row--compact">
             <button id="exportPresetBtn" class="btn btn--ghost btn--small" type="button">Export preset</button>
@@ -256,6 +279,7 @@
             <div class="preview">
               <span>Processed</span>
               <div id="processedMeta" class="preview__meta"></div>
+              <div id="processedWarning" class="preview__warning" hidden></div>
               <div class="preview__frame">
                 <div class="compare" aria-label="Before and after comparison">
                   <img id="processedPreview" class="preview__image compare__image" alt="Processed preview" />

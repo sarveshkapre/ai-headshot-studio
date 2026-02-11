@@ -15,6 +15,9 @@ MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024
 MAX_PIXELS = 20_000_000
 _ALPHA_THRESHOLD = 8
 _ALPHA_TABLE = [0 if i <= _ALPHA_THRESHOLD else 255 for i in range(256)]
+_SKIN_MAX_SAMPLE_EDGE = 240
+_SKIN_MIN_PIXELS = 180
+_SKIN_CHROMA_WARNING_DELTA = 14.0
 
 
 class ProcessingError(ValueError):
@@ -38,6 +41,12 @@ class ProcessRequest:
     soften: float
     jpeg_quality: int
     output_format: str
+
+
+@dataclass(frozen=True)
+class ProcessWarning:
+    code: str
+    message: str
 
 
 def validate_bytes(data: bytes) -> None:
@@ -357,6 +366,133 @@ def resize_if_needed(image: Image.Image, width: int | None, height: int | None) 
     return image.resize((width, height), Image.LANCZOS)
 
 
+def _retouch_is_neutral(req: ProcessRequest) -> bool:
+    return (
+        req.brightness == 1.0
+        and req.contrast == 1.0
+        and req.color == 1.0
+        and req.sharpness == 1.0
+        and req.soften == 0.0
+    )
+
+
+def _coerce_focus_region(
+    image: Image.Image, bbox: tuple[int, int, int, int] | None
+) -> tuple[int, int, int, int]:
+    if bbox is not None:
+        left = max(0, min(image.width - 1, int(bbox[0])))
+        top = max(0, min(image.height - 1, int(bbox[1])))
+        right = max(left + 1, min(image.width, int(bbox[2])))
+        bottom = max(top + 1, min(image.height, int(bbox[3])))
+        if right > left and bottom > top:
+            return (left, top, right, bottom)
+    # Fallback to an upper-center region where the face/head usually sits.
+    return (
+        int(image.width * 0.15),
+        int(image.height * 0.05),
+        int(image.width * 0.85),
+        int(image.height * 0.72),
+    )
+
+
+def _rgb_view(image: Image.Image) -> Image.Image:
+    if image.mode == "RGB":
+        return image
+    if image.mode in {"RGBA", "LA"}:
+        base = Image.new("RGB", image.size, (255, 255, 255))
+        alpha = image.getchannel("A") if "A" in image.getbands() else None
+        if alpha is not None:
+            base.paste(image.convert("RGB"), mask=alpha)
+            return base
+    return image.convert("RGB")
+
+
+def _sample_skin_chroma_shift(
+    before: Image.Image,
+    after: Image.Image,
+    bbox: tuple[int, int, int, int] | None,
+) -> tuple[float, float, float, float] | None:
+    region = _coerce_focus_region(before, bbox)
+    before_roi = _rgb_view(before).crop(region)
+    after_roi = _rgb_view(after).crop(region)
+    if before_roi.width < 2 or before_roi.height < 2:
+        return None
+    if before_roi.size != after_roi.size:
+        after_roi = after_roi.resize(before_roi.size, Image.BILINEAR)
+
+    max_dim = max(before_roi.width, before_roi.height)
+    if max_dim > _SKIN_MAX_SAMPLE_EDGE:
+        scale = _SKIN_MAX_SAMPLE_EDGE / float(max_dim)
+        resized = (
+            max(1, int(round(before_roi.width * scale))),
+            max(1, int(round(before_roi.height * scale))),
+        )
+        before_roi = before_roi.resize(resized, Image.BILINEAR)
+        after_roi = after_roi.resize(resized, Image.BILINEAR)
+
+    before_ycc = before_roi.convert("YCbCr")
+    after_ycc = after_roi.convert("YCbCr")
+    before_rgb_px = before_roi.load()
+    before_ycc_px = before_ycc.load()
+    after_ycc_px = after_ycc.load()
+    if before_rgb_px is None or before_ycc_px is None or after_ycc_px is None:
+        return None
+
+    before_total_cb = 0.0
+    before_total_cr = 0.0
+    after_total_cb = 0.0
+    after_total_cr = 0.0
+    skin_pixels = 0
+    for y in range(before_roi.height):
+        for x in range(before_roi.width):
+            r, g, b = before_rgb_px[x, y]
+            _y, before_cb, before_cr = before_ycc_px[x, y]
+            _after_y, after_cb, after_cr = after_ycc_px[x, y]
+
+            # Conservative skin-like mask to avoid broad false positives.
+            if not (70 <= before_cb <= 142 and 118 <= before_cr <= 186):
+                continue
+            if r < 35 or g < 20 or b < 15:
+                continue
+            if r < g * 0.82:
+                continue
+
+            before_total_cb += before_cb
+            before_total_cr += before_cr
+            after_total_cb += after_cb
+            after_total_cr += after_cr
+            skin_pixels += 1
+
+    if skin_pixels < _SKIN_MIN_PIXELS:
+        return None
+    return (
+        before_total_cb / skin_pixels,
+        before_total_cr / skin_pixels,
+        after_total_cb / skin_pixels,
+        after_total_cr / skin_pixels,
+    )
+
+
+def detect_skin_tone_warning(
+    before: Image.Image,
+    after: Image.Image,
+    *,
+    focus_bbox: tuple[int, int, int, int] | None,
+) -> ProcessWarning | None:
+    chroma_stats = _sample_skin_chroma_shift(before, after, focus_bbox)
+    if chroma_stats is None:
+        return None
+
+    before_cb, before_cr, after_cb, after_cr = chroma_stats
+    delta = math.hypot(after_cb - before_cb, after_cr - before_cr)
+    if delta < _SKIN_CHROMA_WARNING_DELTA:
+        return None
+    return ProcessWarning(
+        code="skin_tone_shift_warning",
+        message="Retouch settings may shift skin tone. Consider reducing Color or Contrast.",
+    )
+
+
 def normalize_request(req: ProcessRequest) -> ProcessRequest:
     preset = req.preset.strip().lower()
     background = req.background.strip().lower()
@@ -440,7 +576,9 @@ def ensure_preset(preset_key: str) -> tuple[float, int | None, int | None]:
     return preset.ratio, preset.width, preset.height
 
 
-def process_image(data: bytes, req: ProcessRequest) -> Image.Image:
+def process_image_with_warnings(
+    data: bytes, req: ProcessRequest
+) -> tuple[Image.Image, list[ProcessWarning]]:
     validate_bytes(data)
     image = load_image(data)
 
@@ -454,13 +592,24 @@ def process_image(data: bytes, req: ProcessRequest) -> Image.Image:
     if req.remove_bg or req.background != "transparent":
         image = apply_background(to_rgba(image), req.background, req.background_hex)
 
+    pre_adjust = image.copy()
     image = apply_adjustments(image, req)
+    warnings: list[ProcessWarning] = []
+    if not _retouch_is_neutral(req):
+        warning = detect_skin_tone_warning(pre_adjust, image, focus_bbox=crop_focus_bbox)
+        if warning is not None:
+            warnings.append(warning)
 
     ratio, width, height = ensure_preset(req.preset)
     image = crop_to_aspect_focus(
         image, ratio=ratio, top_bias=req.top_bias, focus_bbox=crop_focus_bbox
     )
     image = resize_if_needed(image, width=width, height=height)
+    return image, warnings
+
+
+def process_image(data: bytes, req: ProcessRequest) -> Image.Image:
+    image, _warnings = process_image_with_warnings(data, req)
     return image
 
 

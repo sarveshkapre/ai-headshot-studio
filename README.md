@@ -12,7 +12,10 @@ Local-first headshot enhancement studio for background removal, retouching, and 
 - Pre-process export estimator (predicted dimensions + approximate output size)
 - Startup diagnostics panel (API health, background-removal availability, upload limit)
 - Custom background color picker + framing guide overlay
-- Downloadable PNG/JPEG output
+- Print sheet layouts (`2x2` / `3x3`) for at-home printing (client-side export)
+- Warning-only skin-tone consistency checks for aggressive retouch settings
+- Batch continue-on-error toggle in UI (`errors.json` report in ZIP on partial failures)
+- Downloadable PNG/JPEG/WebP output
 - Accessible, keyboard-friendly UI
 
 ## Quickstart
@@ -41,6 +44,7 @@ docker run --rm -p 8000:8000 ai-headshot-studio
 - `GET /api/presets` — list crop presets and styles
 - `POST /api/process` — multipart form data
   - Response includes `X-Output-Width`, `X-Output-Height`, `X-Output-Format`, `X-Processing-Ms`, `X-Output-Bytes` headers
+  - Warning-only signals are exposed via `X-Processing-Warnings` and `X-Processing-Warnings-Count`
 - `POST /api/batch` — multipart form data (process multiple images with the same settings)
   - Returns a ZIP (`application/zip`) with processed outputs.
   - Response includes `X-Batch-Count`, `X-Batch-Succeeded`, `X-Batch-Failed`, `X-Processing-Ms`, `X-Output-Format` headers
