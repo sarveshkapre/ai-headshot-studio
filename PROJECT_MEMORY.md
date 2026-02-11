@@ -2,6 +2,21 @@
 
 ## Decisions
 
+### 2026-02-11 | Add warning-only skin-tone consistency checks + print-sheet export + batch continue-on-error UX
+- Decision: Add a non-blocking skin-tone shift heuristic in the processing pipeline (exposed through `X-Processing-Warnings` headers), add client-side print sheet exports (`2x2`, `3x3`), and surface `/api/batch` `continue_on_error` as a user toggle in the studio UI.
+- Why: These changes improve practical output quality and batch reliability without adding remote dependencies or blocking the core workflow.
+- Evidence:
+  - Code: `src/ai_headshot_studio/processing.py`, `src/ai_headshot_studio/app.py`, `src/ai_headshot_studio/static/index.html`, `src/ai_headshot_studio/static/app.js`, `src/ai_headshot_studio/static/styles.css`.
+  - Tests: `tests/test_processing.py`, `tests/test_api.py`.
+  - Docs: `README.md`, `CHANGELOG.md`, `docs/ROADMAP.md`, `docs/PROJECT.md`, `PLAN.md`, `CLONE_FEATURES.md`.
+- Validation:
+  - `make check` (pass) — `36 passed in 0.83s`
+  - `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`
+  - `make smoke` (pass) — `smoke ok: 600x600 jpeg` / `batch smoke ok: 2x 600x600 jpeg in zip`
+- Commit: `98a2737d73380bf0a14b796cf408e96bfb20bbd7`.
+- Confidence: High.
+- Trust label: `trusted`.
+
 ### 2026-02-10 | Harden background removal against `SystemExit` from `rembg`
 - Decision: Guard `rembg` import/runtime inside the processing pipeline against `SystemExit` and map failures to a stable `background_removal_unavailable` ProcessingError.
 - Why: Some `rembg` installs can terminate the process with `sys.exit(1)` when an ONNX backend is missing; requests must never crash the worker.
@@ -280,11 +295,26 @@
 - Follow-ups:
   - Re-check all automation repos for remaining `codeql-action@v3` usage.
 
+## Mistakes And Fixes
+- 2026-02-11 | Skin-tone heuristic initially required both pre/post frames to match a skin mask and missed obvious shifts.
+  - Root cause: The first implementation filtered post-adjustment pixels by the same skin thresholds, so strong retouch changes could remove pixels from the sample and suppress warnings.
+  - Fix: Measure skin-mask eligibility from the pre-adjusted frame, then compare pre-vs-post chroma on those same pixels.
+  - Prevention rule: For warning heuristics based on “before vs after” comparisons, keep the sampling mask anchored to the baseline frame to avoid self-filtering bias.
+  - Trust label: `trusted`.
+
 ## Verification Evidence
-- `make check` (pass) — ruff, mypy, pytest (`33 passed in 0.92s`)
-- `make smoke` (pass) — `smoke ok: 600x600 jpeg`; `batch smoke ok: 2x 600x600 jpeg in zip`
-- `make bench` (pass) — `bench_processing: 1800x2400 preset=portrait-4x5 format=jpeg iters=12 p50_ms=88.4 p95_ms=90.6 bytes=24186`
-- `gh run list --limit 6 --branch main ...` (pass) — latest GitHub Actions runs show `success` for `docs: update tracker and project memory (cycle 1)`
+
+### 2026-02-11
+- `gh issue list --limit 30 --json number,title,author,state,labels,createdAt,updatedAt` (pass) — `[]` (no open owner/bot issues).
+- `gh run list --limit 10 --json databaseId,status,conclusion,workflowName,headSha,event,createdAt,updatedAt` (pass) — latest `CI`, `CodeQL`, and `Secret Scan` runs are `success`.
+- `gh run watch 21896883807 --exit-status` (pass) — `CI` for commit `98a2737d73380bf0a14b796cf408e96bfb20bbd7`.
+- `gh run watch 21896883812 --exit-status` (pass) — `Secret Scan` for commit `98a2737d73380bf0a14b796cf408e96bfb20bbd7`.
+- `gh run watch 21896883811 --exit-status` (pass) — `CodeQL` for commit `98a2737d73380bf0a14b796cf408e96bfb20bbd7`.
+- `make lint` (pass) — ruff checks + format check.
+- `make test` (pass) — `36 passed in 0.82s`.
+- `make check` (pass) — ruff, mypy, pytest (`36 passed in 0.83s`).
+- `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`.
+- `make smoke` (pass) — `smoke ok: 600x600 jpeg`; `batch smoke ok: 2x 600x600 jpeg in zip`.
 
 ### 2026-02-10
 - `make check` (pass) — `33 passed in 0.73s`
@@ -317,6 +347,12 @@
 - `gh run watch 21834774590 --exit-status` (pass) — GitHub Actions `Secret Scan` on `main` (cycle 4 pushes)
 
 ## Market Scan Notes (Untrusted)
+
+### 2026-02-11
+- remove.bg API docs continue to emphasize configurable output behavior (format/background/cropping controls), reinforcing parity expectations around export customization. Source: `https://www.remove.bg/api`
+- PhotoRoom help docs keep batch editing centered on multi-image workflows and downloadable ZIP artifacts. Source: `https://help.photoroom.com/en/articles/12137322-edit-multiple-images-at-once-with-the-batch-feature-web-app`
+- Canva help docs continue to document background remover upload constraints, validating the need for explicit local file-size messaging. Source: `https://www.canva.com/help/article/canva-background-remover`
+- PFPMaker positioning still emphasizes quick background/style variation for professional headshots, supporting investment in workflow speed and output variants. Source: `https://pfpmaker.com/headshot-generator`
 
 ### 2026-02-09
 - PhotoRoom positions a batch workflow with a ZIP download and per-batch output options; includes toggles like “Keep original background”. Source: `https://www.photoroom.com/tools/batch-mode`

@@ -5,34 +5,41 @@
 - TODO/FIXME markers in code
 - Test and build failures
 - Gaps found during codebase exploration
-- GitHub issues by `sarveshkapre`/trusted bots (none open as of 2026-02-10)
+- GitHub issues by `sarveshkapre`/trusted bots (none open as of 2026-02-11)
 - GitHub Actions signals (`21579321573` historical failure root-caused; latest runs green)
 
 ## Candidate Features To Do
-### Selected (Cycle 1)
-- [x] P1: Harden background removal against `SystemExit` from `rembg` import/runtime and return a stable `background_removal_unavailable` error instead of crashing the request (add unit tests).
-- [x] P2: Add a deterministic static UI contract test (assert critical `src/ai_headshot_studio/static/index.html` element IDs + `src/ai_headshot_studio/static/app.js` lookups remain valid) to catch accidental frontend regressions in `make check`.
-- [x] P3: Add a processing pipeline micro-benchmark script (`make bench`) for a quick local perf guardrail (not a CI gate) and document it.
-- [x] P4: Refresh docs/trackers: dedupe backlog, record market scan links (untrusted), and keep `docs/PROJECT.md` “next improvements” aligned with reality.
+### Selected (Global Cycle 1, 2026-02-11)
+- [x] P1: Add a warning-only skin-tone consistency heuristic for retouch changes and expose warning metadata in `POST /api/process` response headers (`I:5 E:2 S:5 D:4 R:2 C:4`).
+- [x] P1: Add print sheet layouts (`2x2`, `3x3`) in the studio UI with one-click sheet download for at-home printing (`I:5 E:3 S:5 D:4 R:2 C:4`).
+- [x] P2: Surface `/api/batch` `continue_on_error` in UI with explicit toggle + clearer partial-failure messaging (`I:4 E:1 S:5 D:3 R:1 C:5`).
+- [x] P2: Refresh docs/trackers with bounded market scan notes, scored gap map updates, and verification evidence (`I:4 E:1 S:5 D:2 R:1 C:5`).
 
-### Selected (Cycle 5)
-- [x] P1: Face-guided crop framing (optional dependency) so framing is strong even without alpha masks; expose availability via `/api/health` and keep a safe fallback.
-- [x] P2: Add batch CLI helper (process a folder to `outputs/` + optional ZIP + `errors.json`) for non-UI workflows.
-- [x] P3: Add WebP output option with feature detection (return a clear error when encoder is unavailable); update UI + API docs + tests.
-
-### Selected (Cycle 4)
-- [x] P1: Fix `top_bias` semantics to match docs/UI (“Headroom”: higher value should yield more headroom) and update tests.
-- [x] P1: Add subject-guided crop framing using alpha-mask foreground bounds when available (works for transparent PNGs and `remove_bg` output) with safe fallback to `top_bias`.
-- [x] P1: Harden image decoding against decompression-bomb style inputs by rejecting over-`MAX_PIXELS` images before full decode; add regression tests.
-- [x] P4: Normalize `CHANGELOG.md` bullet indentation (avoid malformed nested bullets in “Added”).
-
-### Backlog
-- [ ] P3: Add visual regression smoke script for `src/ai_headshot_studio/static/` workflow interactions (optional, fast, deterministic).
-- [ ] P4: Add skin-tone consistency check (warning-only) for retouch presets.
-- [ ] P4: Add print sheet layouts (2x2 / 3x3) for easy at-home prints.
-- [ ] P4: Add on-device model selection (tradeoff UX: speed vs quality) for background removal.
+### Backlog (Prioritized, Scored)
+- [ ] P2: Add deterministic visual regression smoke script for `src/ai_headshot_studio/static/` workflow snapshots (`I:4 E:3 S:4 D:3 R:2 C:3`).
+- [ ] P2: Add API response-side warning payload support for batch outputs (ZIP summary manifest, warning counts) (`I:4 E:3 S:4 D:3 R:2 C:3`).
+- [ ] P2: Add adaptive downscale guardrail before expensive filters for very large images to reduce latency spikes (`I:4 E:3 S:4 D:3 R:2 C:3`).
+- [ ] P2: Add server-side timing breakdown headers (decode, retouch, encode) for better perf diagnostics (`I:4 E:2 S:4 D:3 R:1 C:4`).
+- [ ] P3: Add skin-tone warning UX hint text in `Studio tips` with opt-out toggle (`I:3 E:1 S:3 D:3 R:1 C:4`).
+- [ ] P3: Add batch option to retain original per-image background while applying retouch/crop settings (`I:4 E:3 S:4 D:3 R:2 C:3`).
+- [ ] P3: Add export sidecar metadata JSON option (settings + output headers) for reproducibility (`I:3 E:2 S:4 D:3 R:1 C:4`).
+- [ ] P3: Add CLI preset bundle import/export parity for `scripts/batch_cli.py` (`I:3 E:2 S:4 D:2 R:1 C:4`).
+- [ ] P3: Add lightweight startup self-check command (`make doctor`) for local dependency diagnostics (`I:3 E:2 S:4 D:2 R:1 C:4`).
+- [ ] P3: Add optional AVIF output support behind feature detection (`I:3 E:3 S:3 D:3 R:2 C:3`).
+- [ ] P4: Add on-device model selection UX (speed vs quality) for background removal (`I:3 E:4 S:3 D:4 R:3 C:2`).
+- [ ] P4: Add preset-level safety rails to cap aggressive slider combos that often look unnatural (`I:3 E:2 S:3 D:3 R:1 C:3`).
+- [ ] P4: Add release-note automation to summarize implemented tracker items into `CHANGELOG.md` (`I:2 E:2 S:3 D:2 R:1 C:4`).
+- [ ] P4: Add Docker smoke path in CI when container runtime is available (`I:3 E:3 S:3 D:2 R:2 C:3`).
+- [ ] P4: Add screenshot examples for each crop preset to improve first-run UX (`I:2 E:3 S:3 D:3 R:1 C:3`).
+- [ ] P4: Add optional background palette presets tuned for common recruiter/portfolio aesthetics (`I:2 E:2 S:3 D:3 R:1 C:3`).
 
 ## Implemented
+- [2026-02-11] Warning-only skin-tone consistency heuristic added for retouch-heavy outputs, surfaced through `X-Processing-Warnings` headers and preview warning text in the UI.
+  - Evidence: `src/ai_headshot_studio/processing.py` (`detect_skin_tone_warning`, `process_image_with_warnings`), `src/ai_headshot_studio/app.py` (`add_warning_headers`, `/api/process` headers), `src/ai_headshot_studio/static/app.js` (`warningMessageForCodes`, `setProcessedWarning`), `tests/test_processing.py`, `tests/test_api.py`.
+- [2026-02-11] Print sheet layout export (`2x2`, `3x3`) shipped in the web studio with one-click sheet download.
+  - Evidence: `src/ai_headshot_studio/static/index.html` (`printLayout`, `sheetDownloadBtn`), `src/ai_headshot_studio/static/app.js` (`createPrintSheetBlob`, `downloadPrintSheet`), `src/ai_headshot_studio/static/styles.css` (`preview__warning` and layout-supporting styles), `README.md`.
+- [2026-02-11] Batch `continue_on_error` is now configurable from the UI with explicit toggle and improved failure guidance.
+  - Evidence: `src/ai_headshot_studio/static/index.html` (`batchContinueOnError`), `src/ai_headshot_studio/static/app.js` (`formDataForBatch`, `processBatch` messaging), `README.md`.
 - [2026-02-10] Background removal no longer crashes on `SystemExit` from `rembg`; returns stable `background_removal_unavailable` error instead.
   - Evidence: `src/ai_headshot_studio/processing.py` (`remove_background` import/runtime guards), `tests/test_processing.py` (SystemExit mapping tests).
 - [2026-02-10] Static UI contract tests ensure `src/ai_headshot_studio/static/app.js` `getElementById(...)` references exist in `src/ai_headshot_studio/static/index.html` and prevent duplicate IDs.
@@ -90,23 +97,11 @@
 - [2026-02-08] Added request/processing edge-case tests.
   - Evidence: `tests/test_processing.py` (`11 passed` via `make check`).
 
-## Gap Map (Cycle 2, Untrusted-Informed)
-- Missing: face-guided crop framing (auto head/face placement), batch CLI for folder workflows, batch continue-on-error report.
-- Weak: import surfaces (bundles/presets) need ongoing hardening as sharing expands; Docker verification is currently untested locally (no Docker).
-- Parity: batch ZIP export, saved profiles + bundles, crop presets/headroom control, predictable export metadata.
-- Differentiator: local-first privacy posture (no accounts/no third-party uploads), offline-ready static UI after setup.
-
-## Gap Map (Cycle 5)
-- Missing: visual regression smoke script for `src/ai_headshot_studio/static/`.
-- Weak: face framing still best-effort (optional dependency); should remain conservative and always fall back cleanly.
-- Parity: WebP output option, batch ZIP workflow, diagnostics surfaced in UI.
-- Differentiator: local-only processing + optional local dependencies (no remote calls).
-
-## Gap Map (Cycle 1)
-- Missing: visual regression smoke script for `src/ai_headshot_studio/static/` workflow interactions (screenshots), skin-tone consistency check, print sheet layouts.
-- Weak: optional background removal dependencies are still best-effort across environments; keep error mapping stable and avoid crashes.
-- Parity: batch ZIP workflow, WebP output option, diagnostics surfaced in UI.
-- Differentiator: local-only processing + optional local dependencies (no remote calls).
+## Gap Map (Cycle 1, Refreshed 2026-02-11)
+- Missing: deterministic visual regression smoke for `src/ai_headshot_studio/static/` interaction flows.
+- Weak: warning-only quality signals are currently only on `/api/process`; batch warning manifests are still basic (`errors.json` only for hard failures).
+- Parity: batch ZIP export with partial-failure continuation, print sheet exports, WebP output option, diagnostics surfaced in UI.
+- Differentiator: local-only processing + optional local dependencies (no remote calls), warning-first quality guardrails that never block output generation.
 
 ## Insights
 - CI failures were caused by Make targets hardcoding `.venv/bin/*` while GitHub Actions installs dependencies into the runner Python environment.
@@ -125,6 +120,9 @@
 - Market baseline sources (untrusted): PhotoRoom batch format options + naming (`https://help.photoroom.com/en/articles/12137322-edit-multiple-photos-with-the-batch-feature-web-app`), PhotoRoom “original background” template (`https://help.photoroom.com/en/articles/12818584-keep-the-original-background-when-using-the-batch-feature`), remove.bg upload limits (`https://www.remove.bg/it/help/a/what-is-the-maximum-image-resolution-file-size`), Canva background remover limits (`https://www.canva.com/learn/background-remover/`).
 - Market baseline sources (untrusted): remove.bg API format options + crop/position controls (`https://www.remove.bg/api`), remove.bg blog (ROI/crop/position knobs) (`https://www.remove.bg/et/b/mastering-remove-bg-api`), PFPMaker headshot generator positioning (background/style variants) (`https://pfpmaker.com/headshot-generator`).
 - Market baseline sources (untrusted, refreshed 2026-02-10): remove.bg API result customization (`https://www.remove.bg/help/a/how-can-i-customize-my-api-results.zst`), PhotoRoom batch docs (`https://help.photoroom.com/en/articles/12137322-edit-multiple-images-at-once-with-the-batch-feature-web-app`).
+- Market scan (untrusted, refreshed 2026-02-11): remove.bg API customization options (`https://www.remove.bg/api`), PhotoRoom batch workflow docs (`https://help.photoroom.com/en/articles/12137322-edit-multiple-images-at-once-with-the-batch-feature-web-app`), Canva background remover limits (`https://www.canva.com/help/article/canva-background-remover`), PFPMaker headshot generator positioning (`https://pfpmaker.com/headshot-generator`).
+- Product insight: warning-only quality checks are easier to ship safely than hard validation gates; users keep output flow while still getting corrective guidance.
+- Product insight: client-side print sheet generation is a high-leverage UX improvement because it avoids backend complexity and keeps privacy guarantees intact.
 
 ## Notes
 - This file is maintained by the autonomous clone loop.
