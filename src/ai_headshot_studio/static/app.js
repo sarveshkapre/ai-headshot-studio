@@ -36,6 +36,7 @@ const elements = {
   batchDownloadBtn: document.getElementById("batchDownloadBtn"),
   batchCancelBtn: document.getElementById("batchCancelBtn"),
   useCaseGrid: document.getElementById("useCaseGrid"),
+  useCaseChecks: document.getElementById("useCaseChecks"),
   removeBg: document.getElementById("removeBg"),
   background: document.getElementById("background"),
   backgroundCustom: document.getElementById("backgroundCustom"),
@@ -546,6 +547,7 @@ function setUseCaseSelection(key) {
   elements.useCaseButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.useCase === state.useCase);
   });
+  renderUseCaseChecks();
 }
 
 function maybeClearUseCase() {
@@ -714,6 +716,65 @@ function estimateOutputGeometry() {
   return { ...crop, outputWidth, outputHeight };
 }
 
+function currentEstimatedOutput() {
+  const geometry = estimateOutputGeometry();
+  if (!geometry) return null;
+  return {
+    width: geometry.outputWidth,
+    height: geometry.outputHeight,
+    format: elements.format.value,
+    quality: Math.round(Number(elements.exportSliders.jpegQuality.value)),
+  };
+}
+
+function checksForUseCase(useCaseKey, estimated) {
+  if (!useCaseKey) {
+    return [{ ok: true, label: "Select a use case to see target checks." }];
+  }
+  if (!estimated) {
+    return [{ ok: false, label: "Upload a photo to run preflight checks." }];
+  }
+
+  const checks = [];
+  const isSquare = estimated.width === estimated.height;
+  const shortEdge = Math.min(estimated.width, estimated.height);
+  const lossy = estimated.format === "jpeg" || estimated.format === "webp";
+
+  if (useCaseKey === "linkedin") {
+    checks.push({ ok: isSquare, label: "Square crop recommended for profile framing." });
+    checks.push({ ok: shortEdge >= 400, label: "Recommended minimum edge is 400px." });
+  } else if (useCaseKey === "x-profile") {
+    checks.push({ ok: isSquare, label: "X profile photo should be square." });
+    checks.push({ ok: shortEdge >= 400, label: "X profile image is best at 400x400 or larger." });
+  } else if (useCaseKey === "github-avatar") {
+    checks.push({ ok: isSquare, label: "Avatar should be square for circular rendering." });
+    checks.push({ ok: shortEdge >= 640, label: "Use at least 640px for crisp retina display." });
+  } else if (useCaseKey === "resume") {
+    checks.push({ ok: estimated.height > estimated.width, label: "Portrait orientation is preferred." });
+    checks.push({ ok: shortEdge >= 600, label: "Keep shortest edge at or above 600px." });
+  } else if (useCaseKey === "passport" || useCaseKey === "us-visa-digital") {
+    checks.push({ ok: estimated.width === 600 && estimated.height === 600, label: "Digital size target is 600x600px." });
+    checks.push({ ok: isSquare, label: "Square crop is required." });
+  }
+
+  if (lossy) {
+    checks.push({ ok: estimated.quality >= 80, label: "Quality 80+ is recommended for lossy export." });
+  }
+  return checks;
+}
+
+function renderUseCaseChecks() {
+  if (!elements.useCaseChecks) return;
+  elements.useCaseChecks.innerHTML = "";
+  const checks = checksForUseCase(state.useCase, currentEstimatedOutput());
+  checks.forEach((check) => {
+    const row = document.createElement("div");
+    row.className = check.ok ? "check-item check-item--pass" : "check-item check-item--fail";
+    row.textContent = `${check.ok ? "PASS" : "CHECK"} · ${check.label}`;
+    elements.useCaseChecks.appendChild(row);
+  });
+}
+
 function canvasToBlob(canvas, format, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -733,6 +794,7 @@ function canvasToBlob(canvas, format, quality) {
 async function runEstimate(requestId) {
   if (!state.file) {
     setEstimateMeta("--");
+    renderUseCaseChecks();
     return;
   }
 
@@ -775,15 +837,18 @@ async function runEstimate(requestId) {
     const sizeLabel = formatBytes(blob.size);
     const sizeFragment = sizeLabel ? ` ~${sizeLabel}` : "";
     setEstimateMeta(`${geometry.outputWidth}×${geometry.outputHeight}${sizeFragment}`);
+    renderUseCaseChecks();
   } catch {
     if (requestId !== state.estimateRequestId) return;
     setEstimateMeta(`${geometry.outputWidth}×${geometry.outputHeight}`);
+    renderUseCaseChecks();
   }
 }
 
 function queueEstimate() {
   if (!state.file) {
     setEstimateMeta("--");
+    renderUseCaseChecks();
     return;
   }
   if (state.estimateTimer) {
@@ -2347,6 +2412,7 @@ updateBackgroundCustomVisibility();
 updateBackgroundSwatch();
 setProcessedWarning("");
 setEstimateMeta("--");
+renderUseCaseChecks();
 updateBatchLimitsHint();
 updateBatchSummary();
 renderBatchList();
