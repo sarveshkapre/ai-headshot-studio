@@ -1,5 +1,29 @@
 # Incidents
 
+## 2026-02-17 | Lint/format regression during warning-pipeline expansion
+- Severity: Low.
+- Status: Resolved.
+- Trigger: Full `make check` run during multi-commit platform-readiness update.
+- Impact:
+  - First `make check` failed on one line-length violation and one import-order violation.
+  - Second `make check` failed on formatter drift in `src/ai_headshot_studio/app.py`.
+- Root cause:
+  - New warning text exceeded configured max line length.
+  - Added test imports were not sorted to repo conventions.
+  - Follow-up changes in `app.py` were not run through formatter before full check.
+- Detection evidence:
+  - Failing command: `make check`.
+  - Error signatures: `E501 Line too long`, `I001 Import block is un-sorted`, `ruff format --check` requested reformat.
+- Fix implemented:
+  - Wrapped long warning string into a multiline expression.
+  - Reordered processing imports in `tests/test_processing.py`.
+  - Ran `ruff format src/ai_headshot_studio/app.py`.
+  - Re-ran `make check`, `make smoke`, and `make build` successfully.
+- Prevention rules:
+  1. Run `ruff check` and `ruff format --check` before the first full `make check` when touching Python files.
+  2. Keep warning messages under configured line-length limits at author time.
+  3. Treat formatter output as required, not optional, before staging final changes.
+
 ## 2026-02-11 | Skin-tone warning heuristic initially missed strong retouch shifts
 - Severity: Low.
 - Status: Resolved.

@@ -414,9 +414,7 @@ async def batch(
                     warning_codes = [
                         str(getattr(item, "code", "warning")) for item in item_warnings
                     ]
-                    warning_messages = [
-                        str(getattr(item, "message", "")) for item in item_warnings
-                    ]
+                    warning_messages = [str(getattr(item, "message", "")) for item in item_warnings]
                     warning_items.append(
                         {
                             "index": idx,

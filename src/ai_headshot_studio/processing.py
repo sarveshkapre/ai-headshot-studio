@@ -512,7 +512,9 @@ def detect_low_lossy_quality_warning(req: ProcessRequest) -> ProcessWarning | No
         return None
     return ProcessWarning(
         code="low_lossy_quality_warning",
-        message=f"Quality below {_RECOMMENDED_MIN_LOSSY_QUALITY} can introduce compression artifacts.",
+        message=(
+            f"Quality below {_RECOMMENDED_MIN_LOSSY_QUALITY} can introduce compression artifacts."
+        ),
     )
 
 

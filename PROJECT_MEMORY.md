@@ -2,6 +2,29 @@
 
 ## Decisions
 
+### 2026-02-17 | Platform readiness uplift + richer warning pipeline + guide/preflight UX
+- Decision: Ship 10 incremental improvements focused on current platform-readiness workflows: new avatar/visa presets, warning heuristics (low resolution + low lossy quality), batch warning manifests, stronger warning UX, expanded use-case presets (`X`, `GitHub`, `US visa digital`), multi-mode framing guides, and in-panel use-case preflight checks.
+- Why: This addresses real-world publishing friction (wrong size/quality, uncertain platform readiness, hidden non-fatal quality issues) while staying local-first and backward-compatible.
+- External references reviewed (2026-02-17):
+  - X profile image guidance (`400x400` recommended): https://business.x.com/en/help/ads-policies/campaign-considerations/twitter-cards
+  - US visa digital photo tool requirements (`600x600` min): https://travel.state.gov/content/travel/en/us-visas/visa-information-resources/photos/photo-composition-template.html
+  - US passport photo requirements (2x2 / composition): https://travel.state.gov/content/travel/en/passports/how-apply/photos.html
+- Evidence:
+  - Code: `src/ai_headshot_studio/presets.py`, `src/ai_headshot_studio/processing.py`, `src/ai_headshot_studio/app.py`, `src/ai_headshot_studio/static/index.html`, `src/ai_headshot_studio/static/app.js`, `src/ai_headshot_studio/static/styles.css`, `scripts/smoke_api.sh`.
+  - Tests: `tests/test_api.py`, `tests/test_processing.py`, `tests/test_static_contract.py`.
+  - Docs: `README.md`.
+- Validation:
+  - `.venv/bin/python -m pytest tests/test_api.py -q` (pass) — `14 passed`
+  - `.venv/bin/python -m pytest tests/test_processing.py tests/test_api.py -q` (pass) — `38 passed`
+  - `node --check src/ai_headshot_studio/static/app.js` (pass)
+  - `.venv/bin/python -m pytest tests/test_static_contract.py -q` (pass) — `2 passed`
+  - `make check` (pass) — `43 passed in 1.16s`
+  - `make smoke` (pass) — `smoke ok: 600x600 jpeg` / `batch smoke ok: 2x 600x600 jpeg in zip` / `batch warning smoke ok: warnings.json emitted`
+  - `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`
+- Commit set: `8313f0a`, `92f58c4`, `0c469b7`, `a9f12e2`, `0020b5a`, `5a9f911`, `ac5976b`, `0ce5e04`, `106828e`, plus this memory/update commit.
+- Confidence: High.
+- Trust label: `verified-local`.
+
 ### 2026-02-11 | Add warning-only skin-tone consistency checks + print-sheet export + batch continue-on-error UX
 - Decision: Add a non-blocking skin-tone shift heuristic in the processing pipeline (exposed through `X-Processing-Warnings` headers), add client-side print sheet exports (`2x2`, `3x3`), and surface `/api/batch` `continue_on_error` as a user toggle in the studio UI.
 - Why: These changes improve practical output quality and batch reliability without adding remote dependencies or blocking the core workflow.

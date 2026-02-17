@@ -7,14 +7,18 @@ Local-first headshot enhancement studio for background removal, retouching, and 
 - Lighting + retouch sliders (brightness, contrast, color, sharpness, soften)
 - Crop presets with headshot-friendly framing
 - Optional face-guided framing (when OpenCV is installed)
-- One-click use-case presets (LinkedIn, resume, passport)
+- One-click use-case presets (LinkedIn, X profile, GitHub avatar, resume, passport, US visa digital)
+- In-panel use-case preflight checks (resolution/shape/quality guidance)
 - Preset export/import (JSON) for reusable studio setups
 - Pre-process export estimator (predicted dimensions + approximate output size)
 - Startup diagnostics panel (API health, background-removal availability, upload limit)
 - Custom background color picker + framing guide overlay
+- Multi-mode framing guides (`Off`, `Headshot`, `Passport`)
 - Print sheet layouts (`2x2` / `3x3`) for at-home printing (client-side export)
 - Warning-only skin-tone consistency checks for aggressive retouch settings
+- Warning-only low-resolution and low-quality export checks
 - Batch continue-on-error toggle in UI (`errors.json` report in ZIP on partial failures)
+- Batch warning manifest (`warnings.json`) when non-fatal quality warnings are detected
 - Downloadable PNG/JPEG/WebP output
 - Accessible, keyboard-friendly UI
 
@@ -47,7 +51,7 @@ docker run --rm -p 8000:8000 ai-headshot-studio
   - Warning-only signals are exposed via `X-Processing-Warnings` and `X-Processing-Warnings-Count`
 - `POST /api/batch` — multipart form data (process multiple images with the same settings)
   - Returns a ZIP (`application/zip`) with processed outputs.
-  - Response includes `X-Batch-Count`, `X-Batch-Succeeded`, `X-Batch-Failed`, `X-Processing-Ms`, `X-Output-Format` headers
+  - Response includes `X-Batch-Count`, `X-Batch-Succeeded`, `X-Batch-Failed`, `X-Batch-Warnings`, `X-Processing-Ms`, `X-Output-Format` headers
 
 ### `POST /api/process` fields
 - `image` (file, required)
@@ -71,6 +75,7 @@ docker run --rm -p 8000:8000 ai-headshot-studio
 - `folder` (optional; safe folder name inside the ZIP)
 - `continue_on_error` (`true|false`, default `false`)
   - When `true`, the ZIP can include an `errors.json` report (and the endpoint will still return `200` for partial failures).
+  - When warning conditions are detected (for example low resolution/quality), ZIP output can include a `warnings.json` report.
 
 ## Notes
 - Background removal runs locally and may download a model the first time it is used.

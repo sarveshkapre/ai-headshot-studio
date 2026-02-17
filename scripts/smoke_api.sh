@@ -109,3 +109,33 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
         raise SystemExit(f"Unexpected batch image size: {sample.size}")
 print("batch smoke ok: 2x 600x600 jpeg in zip")
 PY
+
+curl -fsS \
+  -D "${TMP_DIR}/batch_warn_headers.txt" \
+  -o "${TMP_DIR}/batch_warn.zip" \
+  -F "images=@${TMP_DIR}/input.png" \
+  -F "remove_bg=false" \
+  -F "background=white" \
+  -F "preset=avatar-400" \
+  -F "jpeg_quality=70" \
+  -F "format=jpeg" \
+  -F "folder=warn-smoke" \
+  "http://127.0.0.1:${PORT}/api/batch"
+
+grep -qi '^x-batch-warnings:' "${TMP_DIR}/batch_warn_headers.txt"
+
+"${PYTHON_BIN}" - <<'PY' "${TMP_DIR}/batch_warn.zip"
+import json
+import sys
+import zipfile
+
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    names = archive.namelist()
+    warning_name = next((name for name in names if name.endswith("warnings.json")), None)
+    if warning_name is None:
+        raise SystemExit(f"Missing warnings.json in batch ZIP: {names}")
+    report = json.loads(archive.read(warning_name).decode("utf-8"))
+    if int(report.get("warning_count", 0)) < 1:
+        raise SystemExit(f"warning_count missing/invalid: {report}")
+print("batch warning smoke ok: warnings.json emitted")
+PY
