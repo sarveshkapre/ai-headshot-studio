@@ -1613,12 +1613,20 @@ function parseWarningCodes(headerValue) {
     .filter(Boolean);
 }
 
+const WARNING_MESSAGES = {
+  skin_tone_shift_warning: "Retouch settings may shift skin tone.",
+  low_output_resolution_warning: "Export resolution is low for profile use.",
+  low_lossy_quality_warning: "Quality may introduce visible compression artifacts.",
+};
+
 function warningMessageForCodes(codes) {
   if (!Array.isArray(codes) || !codes.length) return "";
-  if (codes.includes("skin_tone_shift_warning")) {
-    return "Warning: Retouch settings may be shifting skin tone.";
+  const uniqueCodes = [...new Set(codes)];
+  const messages = uniqueCodes.map((code) => WARNING_MESSAGES[code] || code.replaceAll("_", " "));
+  if (messages.length === 1) {
+    return `Warning: ${messages[0]}`;
   }
-  return `Warning: ${codes.join(", ")}`;
+  return `Warnings: ${messages.join(" · ")}`;
 }
 
 function loadImageFromBlob(blob) {
