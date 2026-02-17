@@ -2,6 +2,24 @@
 
 ## Decisions
 
+### 2026-02-17 | Migrate GitHub Actions to self-hosted runner execution
+- Decision: Move all workflows/jobs to `runs-on: self-hosted`, add runner prerequisite checks, replace secret scanning action usage with a local `gitleaks` CLI script (no license secret requirement), and document self-hosted registration + local CI validation flow.
+- Why: GitHub-hosted runners are unavailable due billing constraints; CI must run reliably on repository-managed infrastructure without billing changes.
+- Evidence:
+  - Workflows: `.github/workflows/ci.yml`, `.github/workflows/codeql.yml`, `.github/workflows/dependency-review.yml`, `.github/workflows/secret-scan.yml`.
+  - Scripts: `scripts/verify_self_hosted_runner.sh`, `scripts/run_gitleaks.sh`.
+  - Build tooling/docs: `Makefile`, `README.md`, `docs/SELF_HOSTED_RUNNER.md`, `docs/PROJECT.md`.
+- Validation:
+  - `make runner-prereqs` (pass) — verified required tools + Python >= 3.11.
+  - `make check` (pass) — `43 passed in 1.34s`.
+  - `make smoke` (pass) — `smoke ok: 600x600 jpeg` / `batch smoke ok: 2x 600x600 jpeg in zip` / `batch warning smoke ok: warnings.json emitted`.
+  - `make build` (pass) — built `ai_headshot_studio-0.1.0.tar.gz` and `ai_headshot_studio-0.1.0-py3-none-any.whl`.
+  - `make secret-scan` (pass) — `gitleaks ... no leaks found`.
+  - `rg -n "runs-on:" .github/workflows/*.yml` (pass) — all jobs use `self-hosted`.
+- Commit: pending.
+- Confidence: High.
+- Trust label: `verified-local`.
+
 ### 2026-02-17 | Platform readiness uplift + richer warning pipeline + guide/preflight UX
 - Decision: Ship 10 incremental improvements focused on current platform-readiness workflows: new avatar/visa presets, warning heuristics (low resolution + low lossy quality), batch warning manifests, stronger warning UX, expanded use-case presets (`X`, `GitHub`, `US visa digital`), multi-mode framing guides, and in-panel use-case preflight checks.
 - Why: This addresses real-world publishing friction (wrong size/quality, uncertain platform readiness, hidden non-fatal quality issues) while staying local-first and backward-compatible.

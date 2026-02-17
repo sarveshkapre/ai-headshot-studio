@@ -43,6 +43,17 @@ docker build -t ai-headshot-studio .
 docker run --rm -p 8000:8000 ai-headshot-studio
 ```
 
+## Self-hosted CI
+GitHub Actions in this repo run on `self-hosted` runners.
+
+- Runner setup and registration guide: `docs/SELF_HOSTED_RUNNER.md`
+- Local CI parity commands:
+  - `make runner-prereqs`
+  - `make check`
+  - `make smoke`
+  - `make build`
+  - `make secret-scan`
+
 ## API
 - `GET /api/health` — runtime diagnostics (`status`, `version`, limits, local background-removal availability)
 - `GET /api/presets` — list crop presets and styles

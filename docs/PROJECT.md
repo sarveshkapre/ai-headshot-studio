@@ -11,6 +11,8 @@ make build
 make check
 make smoke
 make bench
+make runner-prereqs
+make secret-scan
 make release
 ```
 
@@ -24,5 +26,5 @@ make release
 
 ## Next 3 improvements
 1. Add a visual regression smoke script for `src/ai_headshot_studio/static/` workflow interactions (optional, fast, deterministic).
-2. Add batch warning manifest details beyond `errors.json` (non-fatal warning counts + per-item warnings).
+2. Add optional runner labels/groups in workflows once dedicated CI hosts are provisioned.
 3. Add on-device model selection (tradeoff UX: speed vs quality) for background removal.

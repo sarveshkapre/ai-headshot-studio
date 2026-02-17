@@ -1,4 +1,4 @@
-.PHONY: setup dev test lint typecheck build check smoke bench release
+.PHONY: setup dev test lint typecheck build check smoke bench secret-scan runner-prereqs release
 
 VENV ?= .venv
 BOOTSTRAP_PYTHON ?= python3
@@ -41,6 +41,12 @@ smoke:
 
 bench:
 	$(PYTHON) ./scripts/bench_processing.py
+
+runner-prereqs:
+	./scripts/verify_self_hosted_runner.sh
+
+secret-scan:
+	./scripts/run_gitleaks.sh
 
 release: build
 	@echo "Release artifact built in dist/"
