@@ -26,7 +26,6 @@ from ai_headshot_studio.processing import (
     ProcessRequest,
     available_presets,
     available_styles,
-    process_image,
     process_image_with_warnings,
     to_bytes,
 )
@@ -345,6 +344,8 @@ async def batch(
     spool = tempfile.SpooledTemporaryFile(max_size=48 * 1024 * 1024)
     total_counter: list[int] = [0]
     errors: list[dict[str, object]] = []
+    warning_items: list[dict[str, object]] = []
+    warning_count = 0
     succeeded = 0
     try:
         with zipfile.ZipFile(spool, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -357,7 +358,7 @@ async def batch(
                         total_counter=total_counter,
                         total_limit=MAX_BATCH_TOTAL_BYTES,
                     )
-                    result = process_image(data, req)
+                    result, item_warnings = process_image_with_warnings(data, req)
                     payload = to_bytes(result, output_format, req.jpeg_quality)
                 except HTTPException as exc:
                     detail = exc.detail
@@ -409,6 +410,22 @@ async def batch(
                     out_name = f"{zip_folder}/{out_name}"
                 archive.writestr(out_name, payload)
 
+                if item_warnings:
+                    warning_codes = [
+                        str(getattr(item, "code", "warning")) for item in item_warnings
+                    ]
+                    warning_messages = [
+                        str(getattr(item, "message", "")) for item in item_warnings
+                    ]
+                    warning_items.append(
+                        {
+                            "index": idx,
+                            "filename": filename,
+                            "codes": warning_codes,
+                            "messages": warning_messages,
+                        }
+                    )
+                    warning_count += len(warning_codes)
                 succeeded += 1
 
             if should_continue and errors:
@@ -425,6 +442,22 @@ async def batch(
                 archive.writestr(
                     report_name,
                     json.dumps(report, indent=2, sort_keys=True).encode("utf-8"),
+                )
+
+            if warning_items:
+                warning_report = {
+                    "total": len(images),
+                    "succeeded": succeeded,
+                    "items_with_warnings": len(warning_items),
+                    "warning_count": warning_count,
+                    "warnings": warning_items,
+                }
+                report_name = "warnings.json"
+                if zip_folder:
+                    report_name = f"{zip_folder}/{report_name}"
+                archive.writestr(
+                    report_name,
+                    json.dumps(warning_report, indent=2, sort_keys=True).encode("utf-8"),
                 )
         spool.seek(0)
     except HTTPException:
@@ -445,6 +478,7 @@ async def batch(
         "X-Batch-Count": str(len(images)),
         "X-Batch-Succeeded": str(succeeded if should_continue else len(images)),
         "X-Batch-Failed": str(len(errors) if should_continue else 0),
+        "X-Batch-Warnings": str(max(0, warning_count)),
         "X-Processing-Ms": str(max(0, elapsed_ms)),
         "X-Output-Format": output_format,
     }

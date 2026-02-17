@@ -279,6 +279,36 @@ def test_batch_continue_on_error_returns_zip_with_errors_json() -> None:
         assert report["errors"][0]["code"] == "invalid_image"
 
 
+def test_batch_includes_warnings_manifest_when_warnings_present() -> None:
+    payload1 = make_image()
+    response = client.post(
+        "/api/batch",
+        files=[
+            ("images", ("a.png", payload1, "image/png")),
+        ],
+        data={
+            "remove_bg": "false",
+            "background": "white",
+            "preset": "avatar-400",
+            "format": "jpeg",
+            "jpeg_quality": "70",
+            "folder": "warn-batch",
+        },
+    )
+    assert response.status_code == 200
+    assert int(response.headers.get("x-batch-warnings", "0")) >= 1
+
+    buffer = io.BytesIO(response.content)
+    with zipfile.ZipFile(buffer) as archive:
+        names = archive.namelist()
+        assert any(name.endswith("warnings.json") for name in names)
+        report_name = next(name for name in names if name.endswith("warnings.json"))
+        report = json.loads(archive.read(report_name).decode("utf-8"))
+        assert report["items_with_warnings"] >= 1
+        assert report["warning_count"] >= 1
+        assert report["warnings"][0]["filename"] == "a.png"
+
+
 def test_batch_rejects_total_size_limit() -> None:
     import ai_headshot_studio.app as app_module
 
