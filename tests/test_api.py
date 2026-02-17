@@ -191,6 +191,24 @@ def test_process_includes_low_output_resolution_warning_for_small_exports() -> N
     assert "low_output_resolution_warning" in warnings
 
 
+def test_process_includes_low_lossy_quality_warning_for_jpeg() -> None:
+    payload = make_image()
+    response = client.post(
+        "/api/process",
+        files={"image": ("input.png", payload, "image/png")},
+        data={
+            "remove_bg": "false",
+            "background": "white",
+            "preset": "portrait-4x5",
+            "format": "jpeg",
+            "jpeg_quality": "70",
+        },
+    )
+    assert response.status_code == 200
+    warnings = response.headers.get("x-processing-warnings", "")
+    assert "low_lossy_quality_warning" in warnings
+
+
 def test_batch_returns_zip_with_processed_images() -> None:
     payload1 = make_image()
     payload2 = make_image(width=900, height=1200)

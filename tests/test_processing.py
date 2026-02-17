@@ -15,6 +15,7 @@ from ai_headshot_studio.processing import (
     crop_to_aspect_focus,
     detect_skin_tone_warning,
     detect_low_output_resolution_warning,
+    detect_low_lossy_quality_warning,
     focus_bbox,
     load_image,
     process_image,
@@ -288,6 +289,49 @@ def test_process_image_with_warnings_includes_low_output_resolution_warning() ->
     _result, warnings = process_image_with_warnings(data, req)
     codes = {warning.code for warning in warnings}
     assert "low_output_resolution_warning" in codes
+
+
+def test_detect_low_lossy_quality_warning() -> None:
+    req = ProcessRequest(
+        remove_bg=False,
+        background="white",
+        background_hex=None,
+        preset="portrait-4x5",
+        style=None,
+        top_bias=0.2,
+        brightness=1.0,
+        contrast=1.0,
+        color=1.0,
+        sharpness=1.0,
+        soften=0.0,
+        jpeg_quality=70,
+        output_format="jpeg",
+    )
+    warning = detect_low_lossy_quality_warning(req)
+    assert warning is not None
+    assert warning.code == "low_lossy_quality_warning"
+
+
+def test_process_image_with_warnings_includes_low_lossy_quality_warning() -> None:
+    data = make_image(1200, 1600)
+    req = ProcessRequest(
+        remove_bg=False,
+        background="white",
+        background_hex=None,
+        preset="portrait-4x5",
+        style=None,
+        top_bias=0.2,
+        brightness=1.0,
+        contrast=1.0,
+        color=1.0,
+        sharpness=1.0,
+        soften=0.0,
+        jpeg_quality=70,
+        output_format="jpeg",
+    )
+    _result, warnings = process_image_with_warnings(data, req)
+    codes = {warning.code for warning in warnings}
+    assert "low_lossy_quality_warning" in codes
 
 
 def test_remove_background_maps_system_exit_on_import(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -19,6 +19,7 @@ _SKIN_MAX_SAMPLE_EDGE = 240
 _SKIN_MIN_PIXELS = 180
 _SKIN_CHROMA_WARNING_DELTA = 14.0
 _RECOMMENDED_MIN_OUTPUT_EDGE = 600
+_RECOMMENDED_MIN_LOSSY_QUALITY = 80
 
 
 class ProcessingError(ValueError):
@@ -504,6 +505,17 @@ def detect_low_output_resolution_warning(image: Image.Image) -> ProcessWarning |
     )
 
 
+def detect_low_lossy_quality_warning(req: ProcessRequest) -> ProcessWarning | None:
+    if req.output_format not in {"jpeg", "webp"}:
+        return None
+    if req.jpeg_quality >= _RECOMMENDED_MIN_LOSSY_QUALITY:
+        return None
+    return ProcessWarning(
+        code="low_lossy_quality_warning",
+        message=f"Quality below {_RECOMMENDED_MIN_LOSSY_QUALITY} can introduce compression artifacts.",
+    )
+
+
 def normalize_request(req: ProcessRequest) -> ProcessRequest:
     preset = req.preset.strip().lower()
     background = req.background.strip().lower()
@@ -619,6 +631,9 @@ def process_image_with_warnings(
     low_res_warning = detect_low_output_resolution_warning(image)
     if low_res_warning is not None:
         warnings.append(low_res_warning)
+    low_quality_warning = detect_low_lossy_quality_warning(req)
+    if low_quality_warning is not None:
+        warnings.append(low_quality_warning)
     return image, warnings
 
 
