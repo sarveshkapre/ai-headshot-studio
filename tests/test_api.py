@@ -174,6 +174,23 @@ def test_process_includes_warning_headers_when_present(monkeypatch) -> None:
     assert response.headers["x-processing-warnings-count"] == "1"
 
 
+def test_process_includes_low_output_resolution_warning_for_small_exports() -> None:
+    payload = make_image()
+    response = client.post(
+        "/api/process",
+        files={"image": ("input.png", payload, "image/png")},
+        data={
+            "remove_bg": "false",
+            "background": "white",
+            "preset": "avatar-400",
+            "format": "png",
+        },
+    )
+    assert response.status_code == 200
+    warnings = response.headers.get("x-processing-warnings", "")
+    assert "low_output_resolution_warning" in warnings
+
+
 def test_batch_returns_zip_with_processed_images() -> None:
     payload1 = make_image()
     payload2 = make_image(width=900, height=1200)

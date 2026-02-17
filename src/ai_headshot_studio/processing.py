@@ -18,6 +18,7 @@ _ALPHA_TABLE = [0 if i <= _ALPHA_THRESHOLD else 255 for i in range(256)]
 _SKIN_MAX_SAMPLE_EDGE = 240
 _SKIN_MIN_PIXELS = 180
 _SKIN_CHROMA_WARNING_DELTA = 14.0
+_RECOMMENDED_MIN_OUTPUT_EDGE = 600
 
 
 class ProcessingError(ValueError):
@@ -493,6 +494,16 @@ def detect_skin_tone_warning(
     )
 
 
+def detect_low_output_resolution_warning(image: Image.Image) -> ProcessWarning | None:
+    short_edge = min(image.width, image.height)
+    if short_edge >= _RECOMMENDED_MIN_OUTPUT_EDGE:
+        return None
+    return ProcessWarning(
+        code="low_output_resolution_warning",
+        message=f"Output is below {_RECOMMENDED_MIN_OUTPUT_EDGE}px on its shortest edge.",
+    )
+
+
 def normalize_request(req: ProcessRequest) -> ProcessRequest:
     preset = req.preset.strip().lower()
     background = req.background.strip().lower()
@@ -605,6 +616,9 @@ def process_image_with_warnings(
         image, ratio=ratio, top_bias=req.top_bias, focus_bbox=crop_focus_bbox
     )
     image = resize_if_needed(image, width=width, height=height)
+    low_res_warning = detect_low_output_resolution_warning(image)
+    if low_res_warning is not None:
+        warnings.append(low_res_warning)
     return image, warnings
 
 

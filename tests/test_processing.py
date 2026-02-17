@@ -14,6 +14,7 @@ from ai_headshot_studio.processing import (
     crop_to_aspect,
     crop_to_aspect_focus,
     detect_skin_tone_warning,
+    detect_low_output_resolution_warning,
     focus_bbox,
     load_image,
     process_image,
@@ -258,6 +259,35 @@ def test_available_styles_include_parameters() -> None:
     classic = styles["classic"]
     for key in ["brightness", "contrast", "color", "sharpness", "soften"]:
         assert key in classic
+
+
+def test_detect_low_output_resolution_warning() -> None:
+    warning = detect_low_output_resolution_warning(Image.new("RGB", (400, 400)))
+    assert warning is not None
+    assert warning.code == "low_output_resolution_warning"
+    assert "600px" in warning.message
+
+
+def test_process_image_with_warnings_includes_low_output_resolution_warning() -> None:
+    data = make_image(1200, 1600)
+    req = ProcessRequest(
+        remove_bg=False,
+        background="white",
+        background_hex=None,
+        preset="avatar-400",
+        style=None,
+        top_bias=0.2,
+        brightness=1.0,
+        contrast=1.0,
+        color=1.0,
+        sharpness=1.0,
+        soften=0.0,
+        jpeg_quality=92,
+        output_format="png",
+    )
+    _result, warnings = process_image_with_warnings(data, req)
+    codes = {warning.code for warning in warnings}
+    assert "low_output_resolution_warning" in codes
 
 
 def test_remove_background_maps_system_exit_on_import(monkeypatch: pytest.MonkeyPatch) -> None:
