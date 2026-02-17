@@ -173,6 +173,7 @@ const STORAGE_KEY = "ai-headshot-studio:settings:v1";
 const ZOOM_KEY = "ai-headshot-studio:preview-zoom:v1";
 const GUIDE_KEY = "ai-headshot-studio:framing-guide:v1";
 const PROFILES_KEY = "ai-headshot-studio:profiles:v1";
+const GUIDE_MODES = ["off", "headshot", "passport"];
 
 const USE_CASES = {
   linkedin: {
@@ -314,7 +315,7 @@ function setZoomMode(mode) {
 function readGuideMode() {
   try {
     const value = localStorage.getItem(GUIDE_KEY);
-    return value === "on" ? "on" : "off";
+    return GUIDE_MODES.includes(String(value)) ? String(value) : "off";
   } catch {
     return "off";
   }
@@ -327,10 +328,23 @@ function writeGuideMode(mode) {
 }
 
 function setGuideMode(mode) {
-  const isOn = mode === "on";
-  elements.toggleGuide.textContent = isOn ? "Guide: On" : "Guide: Off";
-  elements.frameGuide.classList.toggle("show", isOn);
-  writeGuideMode(mode);
+  const nextMode = GUIDE_MODES.includes(mode) ? mode : "off";
+  const labelMap = {
+    off: "Guide: Off",
+    headshot: "Guide: Headshot",
+    passport: "Guide: Passport",
+  };
+  elements.toggleGuide.textContent = labelMap[nextMode] || "Guide: Off";
+  elements.frameGuide.classList.toggle("show", nextMode !== "off");
+  elements.frameGuide.dataset.mode = nextMode;
+  writeGuideMode(nextMode);
+}
+
+function cycleGuideMode() {
+  const current = readGuideMode();
+  const currentIdx = GUIDE_MODES.indexOf(current);
+  const next = GUIDE_MODES[(currentIdx + 1) % GUIDE_MODES.length];
+  setGuideMode(next);
 }
 
 function writeSettings(settings) {
@@ -2245,8 +2259,7 @@ function bindEvents() {
     setZoomMode(current === "fit" ? "actual" : "fit");
   });
   elements.toggleGuide.addEventListener("click", () => {
-    const current = readGuideMode();
-    setGuideMode(current === "on" ? "off" : "on");
+    cycleGuideMode();
   });
   elements.shortcutsBtn.addEventListener("click", () => {
     elements.modalOverlay.hidden = false;
@@ -2290,8 +2303,7 @@ function bindEvents() {
       target &&
       (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
     if (!isTextInput && event.key.toLowerCase() === "g") {
-      const current = readGuideMode();
-      setGuideMode(current === "on" ? "off" : "on");
+      cycleGuideMode();
     }
   });
 

@@ -489,6 +489,38 @@ input[type="range"] {
   border-top: 1px dashed rgba(255, 255, 255, 0.35);
 }
 
+.frame-guide__passport-eyes,
+.frame-guide__passport-chin {
+  display: none;
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  height: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.frame-guide__passport-eyes {
+  top: 41%;
+}
+
+.frame-guide__passport-chin {
+  top: 74%;
+}
+
+.frame-guide[data-mode="passport"] .frame-guide__head,
+.frame-guide[data-mode="passport"] .frame-guide__shoulders {
+  display: none;
+}
+
+.frame-guide[data-mode="passport"] .frame-guide__safe {
+  border-style: solid;
+}
+
+.frame-guide[data-mode="passport"] .frame-guide__passport-eyes,
+.frame-guide[data-mode="passport"] .frame-guide__passport-chin {
+  display: block;
+}
+
 .compare {
   position: relative;
   border-radius: 16px;
