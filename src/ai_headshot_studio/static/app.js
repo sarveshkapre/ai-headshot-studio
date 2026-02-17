@@ -1761,12 +1761,29 @@ async function processBatch() {
     const filename = parseZipFilename(response.headers.get("content-disposition"));
     const succeeded = Number(response.headers.get("x-batch-succeeded"));
     const failed = Number(response.headers.get("x-batch-failed"));
+    const warningCount = Number(response.headers.get("x-batch-warnings"));
     revokeBatchZipUrl();
     state.batchZipUrl = URL.createObjectURL(blob);
     elements.batchDownloadBtn.disabled = false;
-    if (Number.isFinite(succeeded) && Number.isFinite(failed) && failed > 0) {
-      elements.batchStatus.textContent = `Batch ready (${succeeded} ok, ${failed} failed). Download the ZIP.`;
-      showToast("Batch processed with errors. Download ZIP for report.");
+    const hasFailed = Number.isFinite(failed) && failed > 0;
+    const hasWarnings = Number.isFinite(warningCount) && warningCount > 0;
+    if (Number.isFinite(succeeded) && Number.isFinite(failed) && (hasFailed || hasWarnings)) {
+      const parts = [];
+      if (Number.isFinite(succeeded)) {
+        parts.push(`${succeeded} ok`);
+      }
+      if (hasFailed) {
+        parts.push(`${failed} failed`);
+      }
+      if (hasWarnings) {
+        parts.push(`${warningCount} warning${warningCount === 1 ? "" : "s"}`);
+      }
+      elements.batchStatus.textContent = `Batch ready (${parts.join(", ")}). Download the ZIP.`;
+      if (hasFailed) {
+        showToast("Batch processed with errors. Download ZIP for report.");
+      } else {
+        showToast("Batch processed with warnings. Download ZIP for warning details.");
+      }
     } else {
       elements.batchStatus.textContent = "Batch ready. Download the ZIP.";
       showToast("Batch processed.");
