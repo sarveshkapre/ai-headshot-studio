@@ -45,6 +45,8 @@ def test_presets_returns_presets_and_styles() -> None:
     assert isinstance(data["presets"], list)
     assert isinstance(data["styles"], list)
     assert any(item["key"] == "portrait-4x5" for item in data["presets"])
+    assert any(item["key"] == "avatar-400" for item in data["presets"])
+    assert any(item["key"] == "us-visa-digital" for item in data["presets"])
     assert any(item["key"] == "classic" for item in data["styles"])
 
 

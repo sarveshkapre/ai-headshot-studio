@@ -13,6 +13,8 @@ class CropPreset:
 
 PRESETS: dict[str, CropPreset] = {
     "square": CropPreset(name="Square", ratio=1.0),
+    "avatar-400": CropPreset(name="Avatar 400", ratio=1.0, width=400, height=400),
+    "avatar-800": CropPreset(name="Avatar 800", ratio=1.0, width=800, height=800),
     "portrait-4x5": CropPreset(name="Portrait 4x5", ratio=4 / 5),
     "portrait-3x4": CropPreset(name="Portrait 3x4", ratio=3 / 4),
     "portrait-2x3": CropPreset(name="Portrait 2x3", ratio=2 / 3),
@@ -21,6 +23,7 @@ PRESETS: dict[str, CropPreset] = {
     "landscape-16x9": CropPreset(name="Landscape 16x9", ratio=16 / 9),
     "vertical-9x16": CropPreset(name="Vertical 9x16", ratio=9 / 16),
     "passport-2x2": CropPreset(name="Passport 2x2", ratio=1.0, width=600, height=600),
+    "us-visa-digital": CropPreset(name="US Visa Digital", ratio=1.0, width=600, height=600),
 }
 
 STYLES: dict[str, dict[str, float]] = {
